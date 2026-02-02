@@ -1,6 +1,7 @@
 import * as faceapi from 'face-api.js'
 
-const MODELS_BASE = '/models'
+const base = (import.meta.env.BASE_URL || '/').replace(/\/*$/, '') + '/'
+const MODELS_BASE = base + 'models'
 let modelsLoaded = false
 
 /** 加载人脸检测模型（Tiny Face Detector，单分片，避免 SSD 双分片加载不完整） */
