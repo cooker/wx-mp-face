@@ -17,6 +17,7 @@
 - 勾选分组后实时预览，九宫格排列
 - 右侧实时预览面板，支持拖动位置
 - 清空已上传图片
+- **GitHub 仓库图片**：配置 owner/repo/branch/pathPrefix 后，可按相对路径添加远程图片，以 jsDelivr 格式展示：`https://fastly.jsdelivr.net/gh/owner/repo@branch/路径`
 
 ## 快速开始
 
@@ -64,6 +65,10 @@ pnpm preview
 2. 推送 `main` 分支或手动触发 workflow **Deploy to GitHub Pages**，即可自动构建并部署。
 3. 若仓库名为 `wx-mp-face`，访问地址为：`https://<你的用户名>.github.io/wx-mp-face/`。
 
+### GitHub 仓库图片（jsDelivr）
+
+在页面中配置 **GitHub 仓库图片**：填写 owner、repo、branch、可选 pathPrefix，在「添加远程图片」输入相对路径（如 `2026/02/03/xxx.jpg`）即可将图片以 `https://fastly.jsdelivr.net/gh/owner/repo@branch/路径` 格式加入列表并参与分组与预览。配置会保存在本地。
+
 ## 项目结构
 
 ```
@@ -71,8 +76,11 @@ wx-mp-face/
 ├── public/
 │   └── models/          # face-api.js 模型文件
 ├── src/
-│   ├── App.vue          # 主页面
-│   ├── faceApi.js       # 人脸检测封装
+│   ├── App.vue
+│   ├── composables/     # useFaceModels, useUploadedImages, usePreviewDrag, useGitHubRepoConfig
+│   ├── components/      # UploadSection, GitHubRepoConfig, GroupCropSection, PreviewAside, ...
+│   ├── utils/            # imageUtils, copyRenderedStyle
+│   ├── faceApi.js
 │   ├── main.js
 │   └── style.css
 ├── index.html

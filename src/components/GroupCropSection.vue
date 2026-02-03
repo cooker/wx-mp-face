@@ -1,6 +1,6 @@
 <template>
   <section v-if="groups.length" class="mt-6 rounded-xl bg-white p-5 shadow sm:mt-8 sm:p-6 md:p-8">
-    <h2 class="mb-3 text-sm font-medium text-gray-700">第二步：分组 + 裁剪 + 勾选预览</h2>
+    <h2 class="mb-3 text-sm font-medium text-gray-700">第三步：分组 + 裁剪 + 勾选预览</h2>
     <div class="mb-4 flex flex-wrap items-center gap-4">
       <div class="flex items-center gap-2">
         <span class="text-sm text-gray-600">裁剪分辨率</span>

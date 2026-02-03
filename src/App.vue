@@ -8,7 +8,22 @@
       <div class="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
         <div class="min-w-0 flex-1">
           <template v-if="modelsReady">
+            <GitHubRepoConfig
+              v-model:owner="githubOwner"
+              v-model:repo="githubRepo"
+              v-model:branch="githubBranch"
+              v-model:path-prefix="githubPathPrefix"
+              v-model:token="githubToken"
+              :get-jsdelivr-url="getJsdelivrUrl"
+              :get-jsdelivr-url-for-repo="getJsdelivrUrlForRepo"
+              :get-default-path-prefix="getDefaultPathPrefix"
+              :set-path-prefix-to-current="setPathPrefixToCurrent"
+              :upload-file-to-github="uploadFileToGitHub"
+              :uploaded-images="uploadedImages"
+              @add-remote="addRemoteImage"
+            />
             <UploadSection
+              class="mt-6"
               :uploaded-images="uploadedImages"
               :is-dragging="isDragging"
               @update:is-dragging="isDragging = $event"
@@ -60,8 +75,10 @@
 import { useFaceModels } from './composables/useFaceModels.js'
 import { useUploadedImages } from './composables/useUploadedImages.js'
 import { usePreviewDrag } from './composables/usePreviewDrag.js'
+import { useGitHubRepoConfig } from './composables/useGitHubRepoConfig.js'
 import { copyRenderedStyle } from './utils/copyRenderedStyle.js'
 import UploadSection from './components/UploadSection.vue'
+import GitHubRepoConfig from './components/GitHubRepoConfig.vue'
 import GroupCropSection from './components/GroupCropSection.vue'
 import PreviewAside from './components/PreviewAside.vue'
 import AuthorSection from './components/AuthorSection.vue'
@@ -81,8 +98,22 @@ const {
   previewCellStyle,
   previewImgStyle,
   addFiles,
+  addRemoteImage,
   clearImages,
 } = useUploadedImages()
+
+const {
+  owner: githubOwner,
+  repo: githubRepo,
+  branch: githubBranch,
+  pathPrefix: githubPathPrefix,
+  token: githubToken,
+  getJsdelivrUrl,
+  getJsdelivrUrlForRepo,
+  getDefaultPathPrefix,
+  setPathPrefixToCurrent,
+  uploadFileToGitHub,
+} = useGitHubRepoConfig()
 
 const {
   previewAsideRef,

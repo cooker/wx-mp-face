@@ -1,6 +1,6 @@
 <template>
   <section class="rounded-xl bg-white p-5 shadow sm:p-6 md:p-8">
-    <h2 class="mb-4 text-base font-medium text-gray-700 sm:mb-5 sm:text-lg">第一步：上传图片</h2>
+    <h2 class="mb-4 text-base font-medium text-gray-700 sm:mb-5 sm:text-lg">第二步：上传图片</h2>
     <div class="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-stretch md:gap-6">
       <label
         class="flex min-h-[48px] cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 sm:min-h-0 sm:py-2.5 sm:text-sm md:px-8 md:py-3"

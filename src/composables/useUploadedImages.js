@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue'
-import { getImageDimensions } from '../utils/imageUtils.js'
+import { getImageDimensions, getImageDimensionsFromUrl } from '../utils/imageUtils.js'
 
 /**
  * 上传图片、按尺寸分组、裁剪分辨率、勾选分组
@@ -53,6 +53,14 @@ export function useUploadedImages() {
     uploadedImages.value = list
   }
 
+  async function addRemoteImage(url) {
+    if (!url?.trim()) return
+    try {
+      const { width, height } = await getImageDimensionsFromUrl(url)
+      uploadedImages.value = [...uploadedImages.value, { file: null, url: url.trim(), width, height }]
+    } catch (_) {}
+  }
+
   function triggerFileInput() {
     fileInputRef.value?.click()
   }
@@ -68,7 +76,9 @@ export function useUploadedImages() {
   }
 
   function clearImages() {
-    for (const img of uploadedImages.value) URL.revokeObjectURL(img.url)
+    for (const img of uploadedImages.value) {
+      if (img.url?.startsWith('blob:')) URL.revokeObjectURL(img.url)
+    }
     uploadedImages.value = []
     checkedGroupKeys.value = []
     showPreview.value = false
@@ -98,6 +108,7 @@ export function useUploadedImages() {
     previewCellStyle,
     previewImgStyle,
     addFiles,
+    addRemoteImage,
     triggerFileInput,
     onFileChange,
     onDrop,

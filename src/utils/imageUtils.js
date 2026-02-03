@@ -18,6 +18,16 @@ export function getImageDimensions(file) {
   })
 }
 
+export function getImageDimensionsFromUrl(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    img.onerror = reject
+    img.src = url
+  })
+}
+
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const r = new FileReader()
