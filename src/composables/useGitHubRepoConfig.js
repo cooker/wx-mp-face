@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue'
 
 const STORAGE_KEY = 'wx-mp-face-github-repo'
+const REMOTE_DEFAULT_URL = 'https://28fa391b.s3.bitiful.net/blog/github-config-1770167700211.json?no-wait=on'
 
 /** 根据当前时间生成路径前缀，格式 YYYY/MM/DD */
 function getCurrentDatePath() {
@@ -26,10 +27,10 @@ function load() {
     if (s) {
       const saved = { ...defaultConfig, ...JSON.parse(s) }
       saved.pathPrefix = saved.pathPrefix?.trim() || defaultPathPrefix
-      return saved
+      return { config: saved, fromStorage: true }
     }
   } catch (_) {}
-  return { ...defaultConfig, pathPrefix: defaultPathPrefix }
+  return { config: { ...defaultConfig, pathPrefix: defaultPathPrefix }, fromStorage: false }
 }
 
 function save(config) {
@@ -73,11 +74,12 @@ function fileToBase64(file) {
  * repo 支持 img[0,20] 表示从 img0 到 img20 随机选一个
  */
 export function useGitHubRepoConfig() {
-  const owner = ref(load().owner)
-  const repo = ref(load().repo)
-  const branch = ref(load().branch)
-  const pathPrefix = ref(load().pathPrefix)
-  const token = ref(load().token)
+  const { config: initialConfig, fromStorage } = load()
+  const owner = ref(initialConfig.owner)
+  const repo = ref(initialConfig.repo)
+  const branch = ref(initialConfig.branch)
+  const pathPrefix = ref(initialConfig.pathPrefix)
+  const token = ref(initialConfig.token)
 
   watch(
     [owner, repo, branch, pathPrefix, token],
@@ -181,6 +183,19 @@ export function useGitHubRepoConfig() {
     const p = (path || '').trim().replace(/^\/+/, '')
     if (!o || !repoName || !p) return ''
     return `https://fastly.jsdelivr.net/gh/${o}/${repoName}@${b}/${p}`
+  }
+
+  async function loadRemoteDefault() {
+    try {
+      const res = await fetch(REMOTE_DEFAULT_URL, { cache: 'no-store' })
+      if (!res.ok) return
+      const data = await res.json()
+      importConfig(data)
+    } catch (_) {}
+  }
+
+  if (!fromStorage) {
+    loadRemoteDefault()
   }
 
   return {
