@@ -153,6 +153,27 @@ export function useGitHubRepoConfig() {
     return { repo: r, path: contentPath }
   }
 
+  /** 导出配置为 JSON 对象 */
+  function exportConfig() {
+    return {
+      owner: owner.value || '',
+      repo: repo.value || '',
+      branch: branch.value || 'main',
+      pathPrefix: pathPrefix.value || '',
+      token: token.value || '',
+    }
+  }
+
+  /** 从 JSON 对象导入配置 */
+  function importConfig(cfg) {
+    if (!cfg || typeof cfg !== 'object') return
+    owner.value = String(cfg.owner ?? '').trim()
+    repo.value = String(cfg.repo ?? '').trim()
+    branch.value = String(cfg.branch ?? 'main').trim() || 'main'
+    pathPrefix.value = String(cfg.pathPrefix ?? '').trim()
+    token.value = String(cfg.token ?? '').trim()
+  }
+
   /** 使用指定 repo 生成 jsDelivr URL，path 为仓库内完整路径（如 2026/02/02/xxx.jpg） */
   function getJsdelivrUrlForRepo(repoName, path) {
     const o = owner.value?.trim()
@@ -173,5 +194,7 @@ export function useGitHubRepoConfig() {
     getDefaultPathPrefix,
     setPathPrefixToCurrent,
     uploadFileToGitHub,
+    exportConfig,
+    importConfig,
   }
 }

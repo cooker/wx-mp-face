@@ -19,12 +19,15 @@
               :get-default-path-prefix="getDefaultPathPrefix"
               :set-path-prefix-to-current="setPathPrefixToCurrent"
               :upload-file-to-github="uploadFileToGitHub"
+              :export-config="exportConfig"
+              :import-config="importConfig"
               :uploaded-images="uploadedImages"
               @add-remote="addRemoteImage"
             />
             <UploadSection
               class="mt-6"
               :uploaded-images="uploadedImages"
+              :uploading-files="uploadingFiles"
               :is-dragging="isDragging"
               :upload-progress="uploadProgress"
               @update:is-dragging="isDragging = $event"
@@ -53,7 +56,7 @@
             :preview-cell-style="previewCellStyle"
             :preview-img-style="previewImgStyle"
             :preview-position="previewPosition"
-            :set-aside-ref="(el) => { previewAsideRef.value = el }"
+            :set-aside-ref="setPreviewAsideRef"
             @drag-start="onPreviewDragStart"
             @copy-rendered="handleCopyRendered"
           />
@@ -116,10 +119,13 @@ const {
   getDefaultPathPrefix,
   setPathPrefixToCurrent,
   uploadFileToGitHub,
+  exportConfig,
+  importConfig,
 } = useGitHubRepoConfig()
 
 const step3Ref = ref(null)
 const previewAsideWrapRef = ref(null)
+const uploadingFiles = ref([])
 const uploadProgress = ref({
   total: 0,
   current: 0,
@@ -133,6 +139,9 @@ function openPreview() {
 }
 function closePreview() {
   showPreview.value = false
+}
+function setPreviewAsideRef(el) {
+  if (previewAsideRef) previewAsideRef.value = el
 }
 
 async function handleFileUpload(files) {
@@ -176,6 +185,7 @@ async function handleFileUpload(files) {
     return `${t}-${r}.${ext}`
   }
 
+  uploadingFiles.value = list
   uploadProgress.value = {
     total: list.length,
     current: 0,
@@ -197,6 +207,7 @@ async function handleFileUpload(files) {
         status: 'error',
         errorMessage: e?.message || '上传失败',
       }
+      uploadingFiles.value = []
       return
     }
     uploadProgress.value = {
@@ -218,6 +229,7 @@ async function handleFileUpload(files) {
   setTimeout(() => {
     if (uploadProgress.value.status === 'done') {
       uploadProgress.value = { total: 0, current: 0, fileName: '', status: 'idle', errorMessage: '' }
+      uploadingFiles.value = []
     }
   }, 2000)
 }

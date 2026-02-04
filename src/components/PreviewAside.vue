@@ -60,7 +60,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import ImageLightbox from './ImageLightbox.vue'
 
 const props = defineProps({
@@ -77,6 +77,17 @@ defineEmits(['drag-start', 'copy-rendered'])
 const asideElRef = ref(null)
 const enlargedImage = ref(null)
 onMounted(() => {
-  if (asideElRef.value && props.setAsideRef) props.setAsideRef(asideElRef.value)
+  if (asideElRef.value && typeof props.setAsideRef === 'function') {
+    try {
+      props.setAsideRef(asideElRef.value)
+    } catch (_) {}
+  }
+})
+onBeforeUnmount(() => {
+  if (typeof props.setAsideRef === 'function') {
+    try {
+      props.setAsideRef(null)
+    } catch (_) {}
+  }
 })
 </script>

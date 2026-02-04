@@ -63,6 +63,20 @@
         <p class="mt-0.5 text-xs text-gray-400">仅保存在本机 localStorage，用于调用 GitHub API 等</p>
       </div>
     </div>
+    <div class="mb-3 flex flex-wrap gap-2">
+      <button
+        type="button"
+        class="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+        @click="onExport"
+      >
+        导出配置
+      </button>
+      <label class="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
+        <input type="file" accept=".json,application/json" class="sr-only" @change="onImportFile" />
+        导入配置
+      </label>
+    </div>
+    <p v-if="importError" class="mb-2 text-xs text-red-500">{{ importError }}</p>
     <div v-if="uploadedFileNames.length" class="mb-2">
       <p class="mb-1.5 text-xs text-gray-600">添加远程图片（先上传到 GitHub 再添加 CDN 链接，需配置 Token）</p>
       <div class="flex flex-wrap gap-1.5">
@@ -100,6 +114,8 @@ const props = defineProps({
   getDefaultPathPrefix: { type: Function, default: null },
   setPathPrefixToCurrent: { type: Function, default: null },
   uploadFileToGitHub: { type: Function, default: null },
+  exportConfig: { type: Function, default: null },
+  importConfig: { type: Function, default: null },
   uploadedImages: { type: Array, default: () => [] },
 })
 
@@ -134,6 +150,33 @@ const exampleUrl = computed(() => {
 
 const uploadingName = ref('')
 const uploadError = ref('')
+const importError = ref('')
+
+function onExport() {
+  if (typeof props.exportConfig !== 'function') return
+  const cfg = props.exportConfig()
+  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `github-config-${Date.now()}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function onImportFile(e) {
+  importError.value = ''
+  const file = e.target?.files?.[0]
+  if (!file) return
+  try {
+    const text = await file.text()
+    const cfg = JSON.parse(text)
+    if (typeof props.importConfig === 'function') props.importConfig(cfg)
+  } catch (err) {
+    importError.value = err?.message || '导入失败，请检查 JSON 格式'
+  }
+  e.target.value = ''
+}
 
 function buildPath(name) {
   const prefix = (props.pathPrefix || '').trim().replace(/\/+$/, '')
