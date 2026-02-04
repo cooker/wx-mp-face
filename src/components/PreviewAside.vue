@@ -1,6 +1,5 @@
 <template>
   <aside
-    v-if="previewImages.length"
     ref="asideElRef"
     class="h-fit"
     :class="previewPosition ? 'fixed z-40' : 'sticky top-4'"
@@ -14,7 +13,7 @@
         <span class="text-sm font-medium text-gray-600">实时预览</span>
         <span class="text-xs text-gray-400">拖动移动</span>
       </div>
-      <div class="mb-2">
+      <div v-if="previewImages.length" class="mb-2">
         <button
           type="button"
           class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
@@ -23,7 +22,11 @@
           渲染后样式复制
         </button>
       </div>
-      <section class="grid grid-cols-3 gap-1.5" aria-label="图片排列">
+      <section
+        v-if="previewImages.length"
+        class="grid grid-cols-3 gap-1.5"
+        aria-label="图片排列"
+      >
         <button
           v-for="(img, i) in previewImages"
           :key="i"
@@ -34,12 +37,18 @@
         >
           <img
             :src="img.url"
-            :alt="img.file.name"
+            :alt="img.file?.name || '图片'"
             class="h-full w-full object-cover"
             :style="previewImgStyle"
           />
         </button>
       </section>
+      <div
+        v-else
+        class="flex min-h-[120px] flex-col items-center justify-center rounded border border-dashed border-gray-200 bg-gray-50/50 py-6 text-center text-sm text-gray-400"
+      >
+        <span>上传图片后将在此展示九宫格预览</span>
+      </div>
     </div>
     <ImageLightbox
       :visible="!!enlargedImage"

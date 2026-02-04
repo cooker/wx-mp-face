@@ -54,11 +54,20 @@ export function useUploadedImages() {
   }
 
   async function addRemoteImage(url) {
-    if (!url?.trim()) return
-    try {
-      const { width, height } = await getImageDimensionsFromUrl(url)
-      uploadedImages.value = [...uploadedImages.value, { file: null, url: url.trim(), width, height }]
-    } catch (_) {}
+    const u = url?.trim()
+    if (!u) return
+    const item = { file: null, url: u, width: 224, height: 224 }
+    uploadedImages.value = [...uploadedImages.value, item]
+    getImageDimensionsFromUrl(u)
+      .then((dim) => {
+        const list = [...uploadedImages.value]
+        const i = list.findIndex((x) => x.url === u)
+        if (i >= 0) {
+          list[i] = { ...list[i], width: dim.width, height: dim.height }
+          uploadedImages.value = list
+        }
+      })
+      .catch(() => {})
   }
 
   function triggerFileInput() {
@@ -85,7 +94,10 @@ export function useUploadedImages() {
   }
 
   watch(groups, (next, prev) => {
-    if (next.length > 0 && (!prev || prev.length === 0)) checkedGroupKeys.value = next.map((g) => g.key)
+    const prevLen = prev?.length ?? 0
+    if (next.length > 0 && (prevLen === 0 || next.length > prevLen)) {
+      checkedGroupKeys.value = next.map((g) => g.key)
+    }
   })
 
   watch(uploadedImages, (next) => {

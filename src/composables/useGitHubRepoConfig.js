@@ -116,7 +116,7 @@ export function useGitHubRepoConfig() {
    * 上传文件到 GitHub 仓库
    * @param {File} file
    * @param {string} path - 仓库内路径，如 2026/02/02/xxx.jpg
-   * @returns {Promise<{ repo: string }>} 返回实际使用的 repo（用于生成 CDN URL）
+   * @returns {Promise<{ repo: string, path: string }>} 返回 repo 与 API 响应的 content.path（用于拼接加速域名）
    */
   async function uploadFileToGitHub(file, path) {
     const o = owner.value?.trim()
@@ -148,7 +148,9 @@ export function useGitHubRepoConfig() {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.message || res.statusText || `上传失败 ${res.status}`)
     }
-    return { repo: r }
+    const data = await res.json()
+    const contentPath = data?.content?.path ?? path
+    return { repo: r, path: contentPath }
   }
 
   /** 使用指定 repo 生成 jsDelivr URL，path 为仓库内完整路径（如 2026/02/02/xxx.jpg） */

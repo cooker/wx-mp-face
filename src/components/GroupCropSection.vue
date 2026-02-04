@@ -1,61 +1,69 @@
 <template>
-  <section v-if="groups.length" class="mt-6 rounded-xl bg-white p-5 shadow sm:mt-8 sm:p-6 md:p-8">
+  <section class="mt-6 rounded-xl bg-white p-5 shadow sm:mt-8 sm:p-6 md:p-8">
     <h2 class="mb-3 text-sm font-medium text-gray-700">第三步：分组 + 裁剪 + 勾选预览</h2>
-    <div class="mb-4 flex flex-wrap items-center gap-4">
-      <div class="flex items-center gap-2">
-        <span class="text-sm text-gray-600">裁剪分辨率</span>
-        <input
-          :value="cropWidth"
-          type="number"
-          min="1"
-          class="w-20 rounded border px-2 py-1 text-sm"
-          @input="$emit('update:cropWidth', Number(($event.target).value))"
-        />
-        <span class="text-gray-500">×</span>
-        <input
-          :value="cropHeight"
-          type="number"
-          min="1"
-          class="w-20 rounded border px-2 py-1 text-sm"
-          @input="$emit('update:cropHeight', Number(($event.target).value))"
-        />
+    <template v-if="groups.length">
+      <div class="mb-4 flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-600">裁剪分辨率</span>
+          <input
+            :value="cropWidth"
+            type="number"
+            min="1"
+            class="w-20 rounded border px-2 py-1 text-sm"
+            @input="$emit('update:cropWidth', Number(($event.target).value))"
+          />
+          <span class="text-gray-500">×</span>
+          <input
+            :value="cropHeight"
+            type="number"
+            min="1"
+            class="w-20 rounded border px-2 py-1 text-sm"
+            @input="$emit('update:cropHeight', Number(($event.target).value))"
+          />
+        </div>
+        <button
+          type="button"
+          class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+          :disabled="previewImages.length === 0"
+          @click="$emit('open-preview')"
+        >
+          预览选中（{{ previewImages.length }} 张）
+        </button>
       </div>
-      <button
-        type="button"
-        class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-        :disabled="previewImages.length === 0"
-        @click="$emit('open-preview')"
-      >
-        预览选中（{{ previewImages.length }} 张）
-      </button>
-    </div>
-    <div class="space-y-4">
-      <div
-        v-for="g in groups"
-        :key="g.key"
-        class="flex flex-wrap items-start gap-3 rounded border border-gray-200 bg-gray-50 p-3"
-      >
-        <label class="flex cursor-pointer items-center gap-2">
-                <input
-                  v-model="checkedKeys"
-                  type="checkbox"
-                  :value="g.key"
-                  class="rounded border-gray-300"
-                />
-          <span class="text-sm font-medium text-gray-700">尺寸 {{ g.key }}</span>
-        </label>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="(img, i) in g.items"
-            :key="i"
-            type="button"
-            class="h-20 w-20 overflow-hidden rounded border bg-gray-200 transition hover:ring-2 hover:ring-blue-400"
-            @click="openImage(g.key, i)"
-          >
-            <img :src="img.url" :alt="img.file.name" class="h-full w-full object-cover" />
-          </button>
+      <div class="space-y-4">
+        <div
+          v-for="g in groups"
+          :key="g.key"
+          class="flex flex-wrap items-start gap-3 rounded border border-gray-200 bg-gray-50 p-3"
+        >
+          <label class="flex cursor-pointer items-center gap-2">
+            <input
+              v-model="checkedKeys"
+              type="checkbox"
+              :value="g.key"
+              class="rounded border-gray-300"
+            />
+            <span class="text-sm font-medium text-gray-700">尺寸 {{ g.key }}</span>
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="(img, i) in g.items"
+              :key="i"
+              type="button"
+              class="h-20 w-20 overflow-hidden rounded border bg-gray-200 transition hover:ring-2 hover:ring-blue-400"
+              @click="openImage(g.key, i)"
+            >
+              <img :src="img.url" :alt="img.file?.name || '图片'" class="h-full w-full object-cover" />
+            </button>
+          </div>
         </div>
       </div>
+    </template>
+    <div
+      v-else
+      class="flex min-h-[140px] flex-col items-center justify-center rounded border border-dashed border-gray-200 bg-gray-50/50 py-8 text-center text-sm text-gray-400"
+    >
+      <span>上传图片后将在此展示尺寸分组与缩略图</span>
     </div>
     <ImageLightbox
       :visible="enlargedImageIndex !== null"

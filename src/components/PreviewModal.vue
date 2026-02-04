@@ -19,7 +19,7 @@
           >
             <img
               :src="img.url"
-              :alt="img.file.name"
+              :alt="img.file?.name || '图片'"
               class="h-full w-full object-cover"
               :style="previewImgStyle"
             />

@@ -26,23 +26,26 @@
               class="mt-6"
               :uploaded-images="uploadedImages"
               :is-dragging="isDragging"
+              :upload-progress="uploadProgress"
               @update:is-dragging="isDragging = $event"
-              @file-change="addFiles"
-              @drop="(files) => addFiles(files)"
+              @file-change="handleFileUpload"
+              @drop="handleFileUpload"
               @clear="clearImages"
             />
-            <GroupCropSection
-              :groups="groups"
-              :preview-images="previewImages"
-              v-model:crop-width="cropWidth"
-              v-model:crop-height="cropHeight"
-              v-model:checked-group-keys="checkedGroupKeys"
-              @open-preview="showPreview = true"
-            />
+            <div ref="step3Ref">
+              <GroupCropSection
+                :groups="groups"
+                :preview-images="previewImages"
+                v-model:crop-width="cropWidth"
+                v-model:crop-height="cropHeight"
+                v-model:checked-group-keys="checkedGroupKeys"
+                @open-preview="openPreview"
+              />
+            </div>
           </template>
         </div>
 
-        <div class="flex w-72 max-w-[90vw] shrink-0 flex-col gap-4 lg:w-80">
+        <div ref="previewAsideWrapRef" class="flex w-72 max-w-[90vw] shrink-0 flex-col gap-4 lg:w-80">
           <PreviewAside
             v-if="modelsReady"
             :preview-images="previewImages"
@@ -66,12 +69,13 @@
       :crop-height="cropHeight"
       :preview-cell-style="previewCellStyle"
       :preview-img-style="previewImgStyle"
-      @close="showPreview = false"
+      @close="closePreview"
     />
   </div>
 </template>
 
 <script setup>
+import { ref, nextTick } from 'vue'
 import { useFaceModels } from './composables/useFaceModels.js'
 import { useUploadedImages } from './composables/useUploadedImages.js'
 import { usePreviewDrag } from './composables/usePreviewDrag.js'
@@ -97,7 +101,6 @@ const {
   previewImages,
   previewCellStyle,
   previewImgStyle,
-  addFiles,
   addRemoteImage,
   clearImages,
 } = useUploadedImages()
@@ -114,6 +117,110 @@ const {
   setPathPrefixToCurrent,
   uploadFileToGitHub,
 } = useGitHubRepoConfig()
+
+const step3Ref = ref(null)
+const previewAsideWrapRef = ref(null)
+const uploadProgress = ref({
+  total: 0,
+  current: 0,
+  fileName: '',
+  status: 'idle', // idle | uploading | done | error
+  errorMessage: '',
+})
+
+function openPreview() {
+  showPreview.value = true
+}
+function closePreview() {
+  showPreview.value = false
+}
+
+async function handleFileUpload(files) {
+  const list = Array.from(files || []).filter((f) => f.type?.startsWith('image/'))
+  if (!list.length) return
+
+  const owner = githubOwner.value?.trim()
+  const repo = githubRepo.value?.trim()
+  const token = githubToken.value?.trim()
+  if (!owner || !repo || !token) {
+    uploadProgress.value = {
+      total: list.length,
+      current: 0,
+      fileName: '',
+      status: 'error',
+      errorMessage: '请先在第一步配置 owner、repo 和 Token',
+    }
+    return
+  }
+
+  const prefix = (githubPathPrefix.value || '').trim().replace(/\/+$/, '')
+  const buildPath = (name) => (prefix ? `${prefix}/${name}`.replace(/\/+/g, '/') : name)
+
+  /** 从 File 取扩展名，无则按 MIME 推断 */
+  function getExtension(file) {
+    const name = file.name || ''
+    const dot = name.lastIndexOf('.')
+    if (dot >= 0 && dot < name.length - 1) return name.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+    const mime = (file.type || '').toLowerCase()
+    if (mime.includes('png')) return 'png'
+    if (mime.includes('gif')) return 'gif'
+    if (mime.includes('webp')) return 'webp'
+    return 'jpg'
+  }
+
+  /** 随机生成图片文件名（pathPrefix 下唯一性由调用方保证，此处仅生成单文件名） */
+  function randomImageName(file) {
+    const ext = getExtension(file)
+    const r = Math.random().toString(36).slice(2, 10)
+    const t = Date.now().toString(36)
+    return `${t}-${r}.${ext}`
+  }
+
+  uploadProgress.value = {
+    total: list.length,
+    current: 0,
+    fileName: list[0]?.name || '',
+    status: 'uploading',
+    errorMessage: '',
+  }
+
+  for (let i = 0; i < list.length; i++) {
+    const file = list[i]
+    const path = buildPath(randomImageName(file))
+    try {
+      const { repo: usedRepo, path: contentPath } = await uploadFileToGitHub(file, path)
+      const url = getJsdelivrUrlForRepo(usedRepo, contentPath)
+      if (url) await addRemoteImage(url)
+    } catch (e) {
+      uploadProgress.value = {
+        ...uploadProgress.value,
+        status: 'error',
+        errorMessage: e?.message || '上传失败',
+      }
+      return
+    }
+    uploadProgress.value = {
+      ...uploadProgress.value,
+      current: i + 1,
+      fileName: list[i + 1]?.name || '',
+    }
+  }
+
+  uploadProgress.value = {
+    ...uploadProgress.value,
+    status: 'done',
+  }
+  openPreview()
+  nextTick(() => {
+    step3Ref.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    previewAsideWrapRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  })
+  setTimeout(() => {
+    if (uploadProgress.value.status === 'done') {
+      uploadProgress.value = { total: 0, current: 0, fileName: '', status: 'idle', errorMessage: '' }
+    }
+  }, 2000)
+}
 
 const {
   previewAsideRef,
