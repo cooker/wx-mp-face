@@ -29,7 +29,18 @@
         >
           预览选中（{{ previewImages.length }} 张）
         </button>
+        <button
+          type="button"
+          class="rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+          :disabled="localPreviewCount === 0 || isUploading"
+          @click="$emit('confirm-upload')"
+        >
+          {{ isUploading ? `上传中 ${uploadProgress?.current ?? 0}/${uploadProgress?.total ?? 0}…` : '确认上传' }}
+        </button>
       </div>
+      <p v-if="uploadProgress?.status === 'error'" class="mb-4 text-sm text-red-500">
+        {{ uploadProgress.errorMessage }}
+      </p>
       <div class="space-y-4">
         <div
           v-for="g in groups"
@@ -85,9 +96,13 @@ const props = defineProps({
   cropWidth: { type: Number, default: 224 },
   cropHeight: { type: Number, default: 224 },
   checkedGroupKeys: { type: Array, default: () => [] },
+  uploadProgress: { type: Object, default: () => ({ total: 0, current: 0, fileName: '', status: 'idle', errorMessage: '' }) },
 })
 
-const emit = defineEmits(['open-preview', 'update:cropWidth', 'update:cropHeight', 'update:checkedGroupKeys'])
+const emit = defineEmits(['open-preview', 'confirm-upload', 'update:cropWidth', 'update:cropHeight', 'update:checkedGroupKeys'])
+
+const isUploading = computed(() => props.uploadProgress?.status === 'uploading')
+const localPreviewCount = computed(() => props.previewImages.filter((img) => img.file).length)
 
 const checkedKeys = computed({
   get: () => props.checkedGroupKeys,

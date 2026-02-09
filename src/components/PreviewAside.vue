@@ -16,10 +16,38 @@
       <div v-if="previewImages.length" class="mb-2">
         <button
           type="button"
-          class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+          class="copy-btn flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-medium text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-md"
+          :style="{
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            boxShadow: copySuccess ? '0 4px 12px rgba(102, 126, 234, 0.4)' : '0 4px 12px rgba(102, 126, 234, 0.3)',
+          }"
+          :disabled="isCopying"
           @click="$emit('copy-rendered')"
         >
-          渲染后样式复制
+          <svg
+            v-if="!copySuccess"
+            class="h-[18px] w-[18px] shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          <svg
+            v-else
+            class="h-[18px] w-[18px] shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>{{ copySuccess ? '已复制' : '复制HTML' }}</span>
         </button>
       </div>
       <section
@@ -70,6 +98,8 @@ const props = defineProps({
   previewImgStyle: { type: Object, default: () => ({}) },
   previewPosition: { type: Object, default: null },
   setAsideRef: { type: Function, default: null },
+  isCopying: { type: Boolean, default: false },
+  copySuccess: { type: Boolean, default: false },
 })
 
 defineEmits(['drag-start', 'copy-rendered'])

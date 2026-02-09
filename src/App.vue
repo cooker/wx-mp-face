@@ -27,7 +27,7 @@
             <UploadSection
               class="mt-6"
               :uploaded-images="uploadedImages"
-              :uploading-files="uploadingFiles"
+              :uploading-files="[]"
               :is-dragging="isDragging"
               :upload-progress="uploadProgress"
               @update:is-dragging="isDragging = $event"
@@ -39,10 +39,12 @@
               <GroupCropSection
                 :groups="groups"
                 :preview-images="previewImages"
+                :upload-progress="uploadProgress"
                 v-model:crop-width="cropWidth"
                 v-model:crop-height="cropHeight"
                 v-model:checked-group-keys="checkedGroupKeys"
                 @open-preview="openPreview"
+                @confirm-upload="handleConfirmUpload"
               />
             </div>
           </template>
@@ -57,6 +59,8 @@
             :preview-img-style="previewImgStyle"
             :preview-position="previewPosition"
             :set-aside-ref="setPreviewAsideRef"
+            :copy-success="copySuccess"
+            :is-copying="isCopying"
             @drag-start="onPreviewDragStart"
             @copy-rendered="handleCopyRendered"
           />
@@ -83,7 +87,9 @@ import { useFaceModels } from './composables/useFaceModels.js'
 import { useUploadedImages } from './composables/useUploadedImages.js'
 import { usePreviewDrag } from './composables/usePreviewDrag.js'
 import { useGitHubRepoConfig } from './composables/useGitHubRepoConfig.js'
-import { copyRenderedStyle } from './utils/copyRenderedStyle.js'
+import { useClipboard } from './composables/useClipboard.js'
+import { getRenderedStyleHtml } from './utils/copyRenderedStyle.js'
+import { centerCropToBlob } from './utils/imageUtils.js'
 import UploadSection from './components/UploadSection.vue'
 import GitHubRepoConfig from './components/GitHubRepoConfig.vue'
 import GroupCropSection from './components/GroupCropSection.vue'
@@ -104,7 +110,9 @@ const {
   previewImages,
   previewCellStyle,
   previewImgStyle,
+  addFiles,
   addRemoteImage,
+  replaceLocalWithRemoteUrls,
   clearImages,
 } = useUploadedImages()
 
@@ -125,7 +133,6 @@ const {
 
 const step3Ref = ref(null)
 const previewAsideWrapRef = ref(null)
-const uploadingFiles = ref([])
 const uploadProgress = ref({
   total: 0,
   current: 0,
@@ -147,13 +154,22 @@ function setPreviewAsideRef(el) {
 async function handleFileUpload(files) {
   const list = Array.from(files || []).filter((f) => f.type?.startsWith('image/'))
   if (!list.length) return
+  await addFiles(list)
+  nextTick(() => {
+    step3Ref.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
+async function handleConfirmUpload() {
+  const toUpload = previewImages.value.filter((img) => img.file)
+  if (!toUpload.length) return
 
   const owner = githubOwner.value?.trim()
   const repo = githubRepo.value?.trim()
   const token = githubToken.value?.trim()
   if (!owner || !repo || !token) {
     uploadProgress.value = {
-      total: list.length,
+      total: toUpload.length,
       current: 0,
       fileName: '',
       status: 'error',
@@ -165,19 +181,21 @@ async function handleFileUpload(files) {
   const prefix = (githubPathPrefix.value || '').trim().replace(/\/+$/, '')
   const buildPath = (name) => (prefix ? `${prefix}/${name}`.replace(/\/+/g, '/') : name)
 
-  /** 从 File 取扩展名，无则按 MIME 推断 */
   function getExtension(file) {
     const name = file.name || ''
     const dot = name.lastIndexOf('.')
-    if (dot >= 0 && dot < name.length - 1) return name.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
-    const mime = (file.type || '').toLowerCase()
-    if (mime.includes('png')) return 'png'
-    if (mime.includes('gif')) return 'gif'
-    if (mime.includes('webp')) return 'webp'
-    return 'jpg'
+    let ext = ''
+    if (dot >= 0 && dot < name.length - 1) ext = name.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (!ext) {
+      const mime = (file.type || '').toLowerCase()
+      if (mime.includes('png')) return 'png'
+      if (mime.includes('gif')) return 'gif'
+      if (mime.includes('webp')) return 'webp'
+      return 'jpg'
+    }
+    return ext === 'jfif' ? 'jpg' : ext
   }
 
-  /** 随机生成图片文件名（pathPrefix 下唯一性由调用方保证，此处仅生成单文件名） */
   function randomImageName(file) {
     const ext = getExtension(file)
     const r = Math.random().toString(36).slice(2, 10)
@@ -185,51 +203,63 @@ async function handleFileUpload(files) {
     return `${t}-${r}.${ext}`
   }
 
-  uploadingFiles.value = list
   uploadProgress.value = {
-    total: list.length,
+    total: toUpload.length,
     current: 0,
-    fileName: list[0]?.name || '',
+    fileName: toUpload[0]?.file?.name || '',
     status: 'uploading',
     errorMessage: '',
   }
 
-  for (let i = 0; i < list.length; i++) {
-    const file = list[i]
-    const path = buildPath(randomImageName(file))
-    try {
-      const { repo: usedRepo, path: contentPath } = await uploadFileToGitHub(file, path)
-      const url = getJsdelivrUrlForRepo(usedRepo, contentPath)
-      if (url) await addRemoteImage(url)
-    } catch (e) {
+  const urlMap = new Map()
+  let completedCount = 0
+
+  const cw = cropWidth.value || 224
+  const ch = cropHeight.value || 224
+
+  const results = await Promise.allSettled(
+    toUpload.map(async (item) => {
+      const blob = await centerCropToBlob(item.file, cw, ch)
+      const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' })
+      const path = buildPath(randomImageName(file))
+      const result = await uploadFileToGitHub(file, path)
+      completedCount++
       uploadProgress.value = {
         ...uploadProgress.value,
-        status: 'error',
-        errorMessage: e?.message || '上传失败',
+        current: completedCount,
+        fileName: completedCount < toUpload.length ? '并发上传中…' : '',
       }
-      uploadingFiles.value = []
-      return
-    }
+      return { item, result }
+    })
+  )
+
+  const failed = results.find((r) => r.status === 'rejected')
+  if (failed) {
     uploadProgress.value = {
       ...uploadProgress.value,
-      current: i + 1,
-      fileName: list[i + 1]?.name || '',
+      status: 'error',
+      errorMessage: failed.reason?.message || '上传失败',
+    }
+    return
+  }
+
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      const { item, result } = r.value
+      const url = getJsdelivrUrlForRepo(result.repo, result.path)
+      if (url && item.url) urlMap.set(item.url, url)
     }
   }
 
-  uploadProgress.value = {
-    ...uploadProgress.value,
-    status: 'done',
-  }
+  replaceLocalWithRemoteUrls(urlMap)
+  uploadProgress.value = { ...uploadProgress.value, status: 'done' }
   openPreview()
   nextTick(() => {
-    step3Ref.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     previewAsideWrapRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   })
   setTimeout(() => {
     if (uploadProgress.value.status === 'done') {
       uploadProgress.value = { total: 0, current: 0, fileName: '', status: 'idle', errorMessage: '' }
-      uploadingFiles.value = []
     }
   }, 2000)
 }
@@ -241,7 +271,16 @@ const {
   onPreviewDragStart,
 } = usePreviewDrag()
 
+const { isCopying, copySuccess, copyHtml } = useClipboard()
+
 async function handleCopyRendered() {
-  await copyRenderedStyle(previewImages.value, cropWidth.value, cropHeight.value)
+  try {
+    const html = await getRenderedStyleHtml(previewImages.value, cropWidth.value, cropHeight.value)
+    const success = await copyHtml(html)
+    if (!success) throw new Error('copy failed')
+  } catch (e) {
+    console.error('复制失败:', e)
+    alert('复制失败，请手动复制')
+  }
 }
 </script>

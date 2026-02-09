@@ -37,7 +37,7 @@
       </template>
       <template v-else>
         <span class="text-center text-base text-gray-500 sm:text-lg md:text-xl">点击或拖拽图片到此处</span>
-        <span class="text-center text-sm text-gray-400">支持多选，将上传到第一步配置的 GitHub 仓库</span>
+        <span class="text-center text-sm text-gray-400">支持多选，先分组裁剪预览，确认后上传到 GitHub</span>
       </template>
     </div>
     <div

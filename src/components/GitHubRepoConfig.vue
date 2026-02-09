@@ -183,9 +183,15 @@ function buildPath(name) {
   return prefix ? `${prefix}/${name}`.replace(/\/+/g, '/') : name
 }
 
+/** .jfif 统一改为 .jpg 再上传 */
+function normalizeUploadName(name) {
+  if (!name || typeof name !== 'string') return name
+  return name.replace(/\.jfif$/i, '.jpg')
+}
+
 async function addByName(name) {
   uploadError.value = ''
-  const path = buildPath(name)
+  const path = buildPath(normalizeUploadName(name))
   const entry = localImagesByName.value.get(name)
 
   if (entry?.file && typeof props.uploadFileToGitHub === 'function') {

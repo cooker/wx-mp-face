@@ -93,6 +93,19 @@ export function useUploadedImages() {
     showPreview.value = false
   }
 
+  /** 将本地图片（blob URL）替换为远程 CDN URL，用于确认上传后 */
+  function replaceLocalWithRemoteUrls(urlMap) {
+    if (!urlMap || !(urlMap instanceof Map) || urlMap.size === 0) return
+    uploadedImages.value = uploadedImages.value.map((item) => {
+      const newUrl = item.url && urlMap.get(item.url)
+      if (newUrl) {
+        if (item.url?.startsWith('blob:')) URL.revokeObjectURL(item.url)
+        return { ...item, file: null, url: newUrl }
+      }
+      return item
+    })
+  }
+
   watch(groups, (next, prev) => {
     const prevLen = prev?.length ?? 0
     if (next.length > 0 && (prevLen === 0 || next.length > prevLen)) {
@@ -121,6 +134,7 @@ export function useUploadedImages() {
     previewImgStyle,
     addFiles,
     addRemoteImage,
+    replaceLocalWithRemoteUrls,
     triggerFileInput,
     onFileChange,
     onDrop,
