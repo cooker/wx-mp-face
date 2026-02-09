@@ -56,11 +56,14 @@
             :preview-images="previewImages"
             :preview-aside-style="previewAsideStyle"
             :preview-cell-style="previewCellStyle"
+            :preview-grid-style="previewGridStyle"
             :preview-img-style="previewImgStyle"
             :preview-position="previewPosition"
             :set-aside-ref="setPreviewAsideRef"
             :copy-success="copySuccess"
             :is-copying="isCopying"
+            v-model:grid-columns="gridColumns"
+            v-model:grid-rows="gridRows"
             @drag-start="onPreviewDragStart"
             @copy-rendered="handleCopyRendered"
           />
@@ -74,6 +77,8 @@
       :preview-images="previewImages"
       :crop-width="cropWidth"
       :crop-height="cropHeight"
+      :grid-columns="gridColumns"
+      :grid-rows="gridRows"
       :preview-cell-style="previewCellStyle"
       :preview-img-style="previewImgStyle"
       @close="closePreview"
@@ -103,6 +108,9 @@ const {
   uploadedImages,
   cropWidth,
   cropHeight,
+  gridColumns,
+  gridRows,
+  previewGridStyle,
   isDragging,
   showPreview,
   checkedGroupKeys,
@@ -198,9 +206,14 @@ async function handleConfirmUpload() {
 
   function randomImageName(file) {
     const ext = getExtension(file)
-    const r = Math.random().toString(36).slice(2, 10)
+    const r = Math.random().toString(36).slice(2, 12)
     const t = Date.now().toString(36)
-    return `${t}-${r}.${ext}`
+    const rand = typeof crypto !== 'undefined' && crypto.getRandomValues
+      ? Array.from(crypto.getRandomValues(new Uint8Array(4)))
+          .map((n) => n.toString(36))
+          .join('')
+      : Math.random().toString(36).slice(2, 6)
+    return `${t}-${r}-${rand}.${ext}`
   }
 
   uploadProgress.value = {
@@ -233,16 +246,6 @@ async function handleConfirmUpload() {
     })
   )
 
-  const failed = results.find((r) => r.status === 'rejected')
-  if (failed) {
-    uploadProgress.value = {
-      ...uploadProgress.value,
-      status: 'error',
-      errorMessage: failed.reason?.message || '上传失败',
-    }
-    return
-  }
-
   for (const r of results) {
     if (r.status === 'fulfilled') {
       const { item, result } = r.value
@@ -250,10 +253,20 @@ async function handleConfirmUpload() {
       if (url && item.url) urlMap.set(item.url, url)
     }
   }
-
   replaceLocalWithRemoteUrls(urlMap)
+
+  const failed = results.find((r) => r.status === 'rejected')
+  if (failed) {
+    const failedCount = results.filter((r) => r.status === 'rejected').length
+    uploadProgress.value = {
+      ...uploadProgress.value,
+      status: 'error',
+      errorMessage: (failed.reason?.message || '上传失败') + `，${failedCount} 张失败可重试`,
+    }
+    return
+  }
+
   uploadProgress.value = { ...uploadProgress.value, status: 'done' }
-  openPreview()
   nextTick(() => {
     previewAsideWrapRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   })
@@ -275,7 +288,13 @@ const { isCopying, copySuccess, copyHtml } = useClipboard()
 
 async function handleCopyRendered() {
   try {
-    const html = await getRenderedStyleHtml(previewImages.value, cropWidth.value, cropHeight.value)
+    const html = await getRenderedStyleHtml(
+      previewImages.value,
+      cropWidth.value,
+      cropHeight.value,
+      gridColumns.value,
+      gridRows.value
+    )
     const success = await copyHtml(html)
     if (!success) throw new Error('copy failed')
   } catch (e) {

@@ -13,7 +13,28 @@
         <span class="text-sm font-medium text-gray-600">实时预览</span>
         <span class="text-xs text-gray-400">拖动移动</span>
       </div>
-      <div v-if="previewImages.length" class="mb-2">
+      <div v-if="previewImages.length" class="mb-2 flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-gray-500">列</span>
+          <input
+            v-model.number="gridCols"
+            type="number"
+            min="1"
+            max="12"
+            class="w-12 rounded border border-gray-300 px-1 py-0.5 text-center text-xs"
+          />
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs text-gray-500">行</span>
+          <input
+            v-model.number="gridRowsVal"
+            type="number"
+            min="0"
+            max="12"
+            placeholder="自动"
+            class="w-12 rounded border border-gray-300 px-1 py-0.5 text-center text-xs"
+          />
+        </div>
         <button
           type="button"
           class="copy-btn flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-medium text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-md"
@@ -52,7 +73,7 @@
       </div>
       <section
         v-if="previewImages.length"
-        class="grid grid-cols-3 gap-1.5"
+        :style="previewGridStyle"
         aria-label="图片排列"
       >
         <button
@@ -88,21 +109,33 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import ImageLightbox from './ImageLightbox.vue'
 
 const props = defineProps({
   previewImages: { type: Array, default: () => [] },
   previewAsideStyle: { type: Object, default: () => ({}) },
   previewCellStyle: { type: Object, default: () => ({}) },
+  previewGridStyle: { type: Object, default: () => ({}) },
   previewImgStyle: { type: Object, default: () => ({}) },
   previewPosition: { type: Object, default: null },
   setAsideRef: { type: Function, default: null },
   isCopying: { type: Boolean, default: false },
   copySuccess: { type: Boolean, default: false },
+  gridColumns: { type: Number, default: 3 },
+  gridRows: { type: Number, default: 0 },
 })
 
-defineEmits(['drag-start', 'copy-rendered'])
+const emit = defineEmits(['drag-start', 'copy-rendered', 'update:gridColumns', 'update:gridRows'])
+
+const gridCols = computed({
+  get: () => Math.max(1, Math.min(12, props.gridColumns || 3)),
+  set: (v) => emit('update:gridColumns', Math.max(1, Math.min(12, Number(v) || 3))),
+})
+const gridRowsVal = computed({
+  get: () => (props.gridRows > 0 ? props.gridRows : ''),
+  set: (v) => emit('update:gridRows', Math.max(0, Math.min(12, Number(v) || 0))),
+})
 
 const asideElRef = ref(null)
 const enlargedImage = ref(null)

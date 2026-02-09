@@ -38,9 +38,17 @@
           {{ isUploading ? `上传中 ${uploadProgress?.current ?? 0}/${uploadProgress?.total ?? 0}…` : '确认上传' }}
         </button>
       </div>
-      <p v-if="uploadProgress?.status === 'error'" class="mb-4 text-sm text-red-500">
-        {{ uploadProgress.errorMessage }}
-      </p>
+      <div v-if="uploadProgress?.status === 'error'" class="mb-4 flex flex-wrap items-center gap-2">
+        <p class="text-sm text-red-500">{{ uploadProgress.errorMessage }}</p>
+        <button
+          v-if="localPreviewCount > 0"
+          type="button"
+          class="rounded bg-amber-500 px-3 py-1.5 text-xs text-white hover:bg-amber-600"
+          @click="$emit('confirm-upload')"
+        >
+          重试上传
+        </button>
+      </div>
       <div class="space-y-4">
         <div
           v-for="g in groups"

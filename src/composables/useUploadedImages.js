@@ -9,6 +9,8 @@ export function useUploadedImages() {
   const uploadedImages = ref([])
   const cropWidth = ref(224)
   const cropHeight = ref(224)
+  const gridColumns = ref(3)
+  const gridRows = ref(0)
   const isDragging = ref(false)
   const showPreview = ref(false)
   const checkedGroupKeys = ref([])
@@ -35,6 +37,17 @@ export function useUploadedImages() {
   const previewCellStyle = computed(() => ({
     aspectRatio: `${cropWidth.value || 1}/${cropHeight.value || 1}`,
   }))
+
+  const previewGridStyle = computed(() => {
+    const cols = Math.max(1, Math.min(12, gridColumns.value || 3))
+    const rows = gridRows.value > 0 ? Math.max(1, Math.min(12, gridRows.value)) : 0
+    return {
+      display: 'grid',
+      gridTemplateColumns: `repeat(${cols}, 1fr)`,
+      ...(rows > 0 && { gridTemplateRows: `repeat(${rows}, 1fr)` }),
+      gap: '6px',
+    }
+  })
 
   const previewImgStyle = computed(() => ({
     objectPosition: 'center center',
@@ -125,6 +138,9 @@ export function useUploadedImages() {
     uploadedImages,
     cropWidth,
     cropHeight,
+    gridColumns,
+    gridRows,
+    previewGridStyle,
     isDragging,
     showPreview,
     checkedGroupKeys,

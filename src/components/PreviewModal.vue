@@ -7,10 +7,14 @@
     >
       <div class="max-h-[90vh] overflow-auto rounded-lg bg-white p-4 shadow-xl">
         <div class="mb-3 flex items-center justify-between">
-          <span class="text-sm text-gray-600">裁剪 {{ cropWidth }}×{{ cropHeight }}（九宫格）</span>
+          <span class="text-sm text-gray-600">裁剪 {{ cropWidth }}×{{ cropHeight }}（{{ gridColumns }} 列{{ gridRows ? ` × ${gridRows} 行` : '' }}）</span>
           <button type="button" class="text-gray-400 hover:text-gray-600" @click="$emit('close')">✕</button>
         </div>
-        <section class="grid max-w-[min(360px,85vw)] grid-cols-3 gap-1.5" aria-label="图片排列">
+        <section
+          class="max-w-[min(360px,85vw)] gap-1.5"
+          :style="gridStyle"
+          aria-label="图片排列"
+        >
           <div
             v-for="(img, i) in previewImages"
             :key="i"
@@ -31,13 +35,28 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   visible: { type: Boolean, default: false },
   previewImages: { type: Array, default: () => [] },
   cropWidth: { type: Number, default: 224 },
   cropHeight: { type: Number, default: 224 },
+  gridColumns: { type: Number, default: 3 },
+  gridRows: { type: Number, default: 0 },
   previewCellStyle: { type: Object, default: () => ({}) },
   previewImgStyle: { type: Object, default: () => ({}) },
+})
+
+const gridStyle = computed(() => {
+  const cols = Math.max(1, Math.min(12, props.gridColumns || 3))
+  const rows = props.gridRows > 0 ? Math.max(1, Math.min(12, props.gridRows)) : 0
+  return {
+    display: 'grid',
+    gridTemplateColumns: `repeat(${cols}, 1fr)`,
+    ...(rows > 0 && { gridTemplateRows: `repeat(${rows}, 1fr)` }),
+    gap: '6px',
+  }
 })
 
 defineEmits(['close'])

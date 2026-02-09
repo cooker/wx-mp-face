@@ -1,6 +1,17 @@
 <template>
   <section class="rounded-xl border border-gray-200 bg-white p-4 shadow">
-    <h2 class="mb-3 text-sm font-medium text-gray-700">第一步：设置 GitHub 仓库配置</h2>
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <h2 class="text-sm font-medium text-gray-700">第一步：设置 GitHub 仓库配置</h2>
+      <button
+        v-if="isConfigured"
+        type="button"
+        class="text-xs text-blue-600 hover:text-blue-700"
+        @click="isCollapsed = !isCollapsed"
+      >
+        {{ isCollapsed ? '展开配置' : '收起' }}
+      </button>
+    </div>
+    <template v-if="!isCollapsed">
     <p class="mb-3 text-xs text-gray-500">
       配置后可用 <code class="rounded bg-gray-100 px-1">https://fastly.jsdelivr.net/gh/owner/repo@branch/路径</code> 格式展示图片
     </p>
@@ -97,11 +108,15 @@
     <p v-if="exampleUrl" class="truncate text-xs text-gray-400" :title="exampleUrl">
       示例：{{ exampleUrl }}
     </p>
+    </template>
+    <p v-else-if="isConfigured" class="text-xs text-gray-500">
+      已配置 {{ owner }}/{{ repo }}<template v-if="branch"> @{{ branch }}</template>
+    </p>
   </section>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   owner: { type: String, default: '' },
@@ -130,6 +145,10 @@ const token = computed({ get: () => props.token, set: (v) => emit('update:token'
 const defaultPathPrefixPlaceholder = computed(() =>
   typeof props.getDefaultPathPrefix === 'function' ? props.getDefaultPathPrefix() : '2026/02/02'
 )
+
+const isConfigured = computed(() => !!(props.owner?.trim() && props.repo?.trim()))
+const isCollapsed = ref(false)
+watch(isConfigured, (v) => { if (v) isCollapsed.value = true }, { immediate: true })
 
 /** 本地图片（有 file）：name -> { name, file }，用于上传到 GitHub */
 const localImagesByName = computed(() => {
