@@ -17,7 +17,7 @@
         >
           <div
             v-for="(img, i) in previewImages"
-            :key="i"
+            :key="img.url"
             class="overflow-hidden rounded border bg-gray-100"
             :style="previewCellStyle"
           >

@@ -13,7 +13,8 @@ export function useUploadedImages() {
   const gridRows = ref(0)
   const isDragging = ref(false)
   const showPreview = ref(false)
-  const checkedGroupKeys = ref([])
+  const checkedImageUrls = ref([])
+  const previewImageOrder = ref([])
 
   const groups = computed(() => {
     const map = new Map()
@@ -26,12 +27,21 @@ export function useUploadedImages() {
   })
 
   const previewImages = computed(() => {
-    const checked = new Set(checkedGroupKeys.value)
-    const list = []
-    for (const g of groups.value) {
-      if (checked.size === 0 || checked.has(g.key)) list.push(...g.items)
+    const checked = new Set(checkedImageUrls.value)
+    let selected =
+      checked.size === 0
+        ? uploadedImages.value
+        : uploadedImages.value.filter((img) => img.url && checked.has(img.url))
+    const order = previewImageOrder.value
+    if (order.length > 0) {
+      const orderMap = new Map(order.map((url, i) => [url, i]))
+      selected = [...selected].sort((a, b) => {
+        const ia = orderMap.has(a.url) ? orderMap.get(a.url) : 1e9
+        const ib = orderMap.has(b.url) ? orderMap.get(b.url) : 1e9
+        return ia - ib
+      })
     }
-    return list
+    return selected
   })
 
   const previewCellStyle = computed(() => ({
@@ -102,7 +112,8 @@ export function useUploadedImages() {
       if (img.url?.startsWith('blob:')) URL.revokeObjectURL(img.url)
     }
     uploadedImages.value = []
-    checkedGroupKeys.value = []
+    checkedImageUrls.value = []
+    previewImageOrder.value = []
     showPreview.value = false
   }
 
@@ -117,17 +128,47 @@ export function useUploadedImages() {
       }
       return item
     })
+    checkedImageUrls.value = checkedImageUrls.value.map((url) => urlMap.get(url) || url)
+    previewImageOrder.value = previewImageOrder.value.map((url) => urlMap.get(url) || url)
   }
 
-  watch(groups, (next, prev) => {
-    const prevLen = prev?.length ?? 0
-    if (next.length > 0 && (prevLen === 0 || next.length > prevLen)) {
-      checkedGroupKeys.value = next.map((g) => g.key)
-    }
-  })
+  function reorderPreviewImages(fromIndex, toIndex) {
+    const list = previewImages.value.map((img) => img.url).filter(Boolean)
+    if (fromIndex < 0 || fromIndex >= list.length || toIndex < 0 || toIndex >= list.length) return
+    const [url] = list.splice(fromIndex, 1)
+    list.splice(toIndex, 0, url)
+    previewImageOrder.value = list
+  }
+
+  watch(
+    () => uploadedImages.value,
+    (next, prev) => {
+      if (!next?.length) return
+      const prevUrls = new Set((prev || []).map((img) => img.url).filter(Boolean))
+      const newUrls = next.filter((img) => img.url && !prevUrls.has(img.url)).map((img) => img.url)
+      if (newUrls.length > 0) {
+        checkedImageUrls.value = [...new Set([...checkedImageUrls.value, ...newUrls])]
+      }
+    },
+    { deep: true }
+  )
 
   watch(uploadedImages, (next) => {
     if (next.length > 0) {
+      cropWidth.value = Math.min(...next.map((img) => img.width))
+      cropHeight.value = Math.min(...next.map((img) => img.height))
+    }
+  }, { deep: true })
+
+  watch(checkedImageUrls, (urls) => {
+    const set = new Set(urls || [])
+    if (set.size > 0 && previewImageOrder.value.length > 0) {
+      previewImageOrder.value = previewImageOrder.value.filter((url) => set.has(url))
+    }
+  }, { deep: true })
+
+  watch(previewImages, (next) => {
+    if (next?.length > 0) {
       cropWidth.value = Math.min(...next.map((img) => img.width))
       cropHeight.value = Math.min(...next.map((img) => img.height))
     }
@@ -143,7 +184,8 @@ export function useUploadedImages() {
     previewGridStyle,
     isDragging,
     showPreview,
-    checkedGroupKeys,
+    checkedImageUrls,
+    previewImageOrder,
     groups,
     previewImages,
     previewCellStyle,
@@ -151,6 +193,7 @@ export function useUploadedImages() {
     addFiles,
     addRemoteImage,
     replaceLocalWithRemoteUrls,
+    reorderPreviewImages,
     triggerFileInput,
     onFileChange,
     onDrop,

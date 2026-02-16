@@ -42,7 +42,7 @@
                 :upload-progress="uploadProgress"
                 v-model:crop-width="cropWidth"
                 v-model:crop-height="cropHeight"
-                v-model:checked-group-keys="checkedGroupKeys"
+                v-model:checked-image-urls="checkedImageUrls"
                 @open-preview="openPreview"
                 @confirm-upload="handleConfirmUpload"
               />
@@ -64,6 +64,7 @@
             :is-copying="isCopying"
             v-model:grid-columns="gridColumns"
             v-model:grid-rows="gridRows"
+            :reorder-preview-images="reorderPreviewImages"
             @drag-start="onPreviewDragStart"
             @copy-rendered="handleCopyRendered"
           />
@@ -113,7 +114,7 @@ const {
   previewGridStyle,
   isDragging,
   showPreview,
-  checkedGroupKeys,
+  checkedImageUrls,
   groups,
   previewImages,
   previewCellStyle,
@@ -121,6 +122,7 @@ const {
   addFiles,
   addRemoteImage,
   replaceLocalWithRemoteUrls,
+  reorderPreviewImages,
   clearImages,
 } = useUploadedImages()
 

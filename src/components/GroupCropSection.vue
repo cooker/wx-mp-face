@@ -55,25 +55,46 @@
           :key="g.key"
           class="flex flex-wrap items-start gap-3 rounded border border-gray-200 bg-gray-50 p-3"
         >
-          <label class="flex cursor-pointer items-center gap-2">
-            <input
-              v-model="checkedKeys"
-              type="checkbox"
-              :value="g.key"
-              class="rounded border-gray-300"
-            />
+          <div class="flex w-full items-center justify-between">
             <span class="text-sm font-medium text-gray-700">尺寸 {{ g.key }}</span>
-          </label>
+            <div class="flex gap-1">
+              <button
+                type="button"
+                class="text-xs text-blue-600 hover:text-blue-700"
+                @click="checkGroup(g.items, true)"
+              >
+                全选
+              </button>
+              <span class="text-gray-300">|</span>
+              <button
+                type="button"
+                class="text-xs text-gray-500 hover:text-gray-700"
+                @click="checkGroup(g.items, false)"
+              >
+                取消
+              </button>
+            </div>
+          </div>
           <div class="flex flex-wrap gap-2">
-            <button
+            <div
               v-for="(img, i) in g.items"
-              :key="i"
-              type="button"
-              class="h-20 w-20 overflow-hidden rounded border bg-gray-200 transition hover:ring-2 hover:ring-blue-400"
-              @click="openImage(g.key, i)"
+              :key="img.url"
+              class="relative flex h-20 w-20 overflow-hidden rounded border transition hover:ring-2 hover:ring-blue-400"
+              :class="isChecked(img.url) ? 'ring-2 ring-blue-400' : 'bg-gray-200'"
             >
-              <img :src="img.url" :alt="img.file?.name || '图片'" class="h-full w-full object-cover" />
-            </button>
+              <input
+                type="checkbox"
+                :checked="isChecked(img.url)"
+                class="absolute left-1 top-1 z-10 cursor-pointer rounded border-gray-300"
+                @change="toggleCheck(img.url)"
+              />
+              <img
+                :src="img.url"
+                :alt="img.file?.name || '图片'"
+                class="h-full w-full cursor-pointer object-cover"
+                @click="openImage(g.key, i)"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -103,19 +124,42 @@ const props = defineProps({
   previewImages: { type: Array, default: () => [] },
   cropWidth: { type: Number, default: 224 },
   cropHeight: { type: Number, default: 224 },
-  checkedGroupKeys: { type: Array, default: () => [] },
+  checkedImageUrls: { type: Array, default: () => [] },
   uploadProgress: { type: Object, default: () => ({ total: 0, current: 0, fileName: '', status: 'idle', errorMessage: '' }) },
 })
 
-const emit = defineEmits(['open-preview', 'confirm-upload', 'update:cropWidth', 'update:cropHeight', 'update:checkedGroupKeys'])
+const emit = defineEmits(['open-preview', 'confirm-upload', 'update:cropWidth', 'update:cropHeight', 'update:checkedImageUrls'])
 
 const isUploading = computed(() => props.uploadProgress?.status === 'uploading')
 const localPreviewCount = computed(() => props.previewImages.filter((img) => img.file).length)
 
-const checkedKeys = computed({
-  get: () => props.checkedGroupKeys,
-  set: (v) => emit('update:checkedGroupKeys', v),
-})
+const checkedSet = computed(() => new Set(props.checkedImageUrls || []))
+
+function isChecked(url) {
+  if (!url) return false
+  const set = checkedSet.value
+  return set.size === 0 || set.has(url)
+}
+
+function toggleCheck(url) {
+  if (!url) return
+  const allUrls = props.groups.flatMap((g) => g.items.map((img) => img.url).filter(Boolean))
+  let set = new Set(props.checkedImageUrls || [])
+  if (set.size === 0) set = new Set(allUrls)
+  if (set.has(url)) set.delete(url)
+  else set.add(url)
+  emit('update:checkedImageUrls', [...set])
+}
+
+function checkGroup(items, check) {
+  const urls = items.map((img) => img.url).filter(Boolean)
+  const allUrls = props.groups.flatMap((g) => g.items.map((img) => img.url).filter(Boolean))
+  let set = new Set(props.checkedImageUrls || [])
+  if (set.size === 0 && !check) return
+  if (set.size === 0) set = new Set(allUrls)
+  urls.forEach((url) => (check ? set.add(url) : set.delete(url)))
+  emit('update:checkedImageUrls', [...set])
+}
 
 const enlargedImageIndex = ref(null)
 

@@ -76,21 +76,37 @@
         :style="previewGridStyle"
         aria-label="图片排列"
       >
-        <button
+        <div
           v-for="(img, i) in previewImages"
-          :key="i"
-          type="button"
-          class="overflow-hidden rounded border bg-gray-100 text-left transition hover:ring-2 hover:ring-blue-400"
+          :key="img.url"
+          draggable="true"
+          class="group relative overflow-hidden rounded border bg-gray-100 transition hover:ring-2 hover:ring-blue-400"
+          :class="{ 'opacity-50': draggingIndex === i }"
           :style="previewCellStyle"
-          @click="enlargedImage = { url: img.url, alt: img.file?.name || '' }"
+          @dragstart="onDragStart($event, i)"
+          @dragover.prevent="onDragOver($event, i)"
+          @drop.prevent="onDrop(i)"
+          @dragend="draggingIndex = null"
         >
-          <img
-            :src="img.url"
-            :alt="img.file?.name || '图片'"
-            class="h-full w-full object-cover"
-            :style="previewImgStyle"
-          />
-        </button>
+          <button
+            type="button"
+            class="h-full w-full text-left"
+            @click="enlargedImage = { url: img.url, alt: img.file?.name || '' }"
+          >
+            <img
+              :src="img.url"
+              :alt="img.file?.name || '图片'"
+              class="pointer-events-none h-full w-full object-cover"
+              :style="previewImgStyle"
+              draggable="false"
+            />
+          </button>
+          <span
+            class="absolute right-1 top-1 rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition group-hover:opacity-100"
+          >
+            拖动排序
+          </span>
+        </div>
       </section>
       <div
         v-else
@@ -124,9 +140,31 @@ const props = defineProps({
   copySuccess: { type: Boolean, default: false },
   gridColumns: { type: Number, default: 3 },
   gridRows: { type: Number, default: 0 },
+  reorderPreviewImages: { type: Function, default: null },
 })
 
 const emit = defineEmits(['drag-start', 'copy-rendered', 'update:gridColumns', 'update:gridRows'])
+
+const draggingIndex = ref(null)
+
+function onDragStart(e, index) {
+  draggingIndex.value = index
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(index))
+  e.dataTransfer.setData('application/json', JSON.stringify({ index }))
+}
+
+function onDragOver(e, index) {
+  if (draggingIndex.value === null || draggingIndex.value === index) return
+  e.dataTransfer.dropEffect = 'move'
+}
+
+function onDrop(toIndex) {
+  const from = draggingIndex.value
+  if (from === null || from === toIndex || typeof props.reorderPreviewImages !== 'function') return
+  props.reorderPreviewImages(from, toIndex)
+  draggingIndex.value = null
+}
 
 const gridCols = computed({
   get: () => Math.max(1, Math.min(12, props.gridColumns || 3)),
