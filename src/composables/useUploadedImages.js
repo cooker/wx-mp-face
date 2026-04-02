@@ -117,6 +117,21 @@ export function useUploadedImages() {
     showPreview.value = false
   }
 
+  /** 从列表中移除单张（实时预览 / 第三步分组同步更新） */
+  function removeUploadedImage(url) {
+    if (!url) return
+    const list = [...uploadedImages.value]
+    const i = list.findIndex((img) => img.url === url)
+    if (i < 0) return
+    const removed = list[i]
+    if (removed.url?.startsWith('blob:')) URL.revokeObjectURL(removed.url)
+    list.splice(i, 1)
+    uploadedImages.value = list
+    checkedImageUrls.value = checkedImageUrls.value.filter((u) => u !== url)
+    previewImageOrder.value = previewImageOrder.value.filter((u) => u !== url)
+    if (!list.length) showPreview.value = false
+  }
+
   /** 将本地图片（blob URL）替换为远程 CDN URL，用于确认上传后 */
   function replaceLocalWithRemoteUrls(urlMap) {
     if (!urlMap || !(urlMap instanceof Map) || urlMap.size === 0) return
@@ -194,6 +209,7 @@ export function useUploadedImages() {
     addRemoteImage,
     replaceLocalWithRemoteUrls,
     reorderPreviewImages,
+    removeUploadedImage,
     triggerFileInput,
     onFileChange,
     onDrop,

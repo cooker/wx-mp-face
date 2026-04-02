@@ -1,76 +1,45 @@
 <template>
-  <aside
-    ref="asideElRef"
-    class="h-fit"
-    :class="previewPosition ? 'fixed z-40' : 'sticky top-4'"
-    :style="previewAsideStyle"
-  >
-    <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-lg">
-      <div
-        class="mb-2 flex cursor-grab select-none items-center justify-between border-b border-gray-100 pb-2 active:cursor-grabbing"
-        @mousedown.prevent="$emit('drag-start', $event)"
-      >
-        <span class="text-sm font-medium text-gray-600">实时预览</span>
-        <span class="text-xs text-gray-400">拖动移动</span>
-      </div>
-      <div v-if="previewImages.length" class="mb-2 flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-1.5">
-          <span class="text-xs text-gray-500">列</span>
-          <input
-            v-model.number="gridCols"
-            type="number"
-            min="1"
-            max="12"
-            class="w-12 rounded border border-gray-300 px-1 py-0.5 text-center text-xs"
-          />
-        </div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-xs text-gray-500">行</span>
-          <input
-            v-model.number="gridRowsVal"
-            type="number"
-            min="0"
-            max="12"
-            placeholder="自动"
-            class="w-12 rounded border border-gray-300 px-1 py-0.5 text-center text-xs"
-          />
-        </div>
-        <button
-          type="button"
-          class="copy-btn flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-medium text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-md"
-          :style="{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            boxShadow: copySuccess ? '0 4px 12px rgba(102, 126, 234, 0.4)' : '0 4px 12px rgba(102, 126, 234, 0.3)',
-          }"
-          :disabled="isCopying"
-          @click="$emit('copy-rendered')"
-        >
-          <svg
-            v-if="!copySuccess"
-            class="h-[18px] w-[18px] shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
+  <aside class="preview-aside">
+    <n-card size="small" :bordered="true">
+      <n-space v-if="previewImages.length" vertical :size="12" style="margin-bottom: 12px">
+        <n-space :wrap="true" align="center" :size="12">
+          <n-space :size="6" align="center" :wrap="false">
+            <n-text depth="3" style="font-size: 12px">列</n-text>
+            <n-input-number
+              :value="gridCols"
+              :min="1"
+              :max="12"
+              size="small"
+              :show-button="false"
+              style="width: 64px"
+              @update:value="onGridCols"
+            />
+          </n-space>
+          <n-space :size="6" align="center" :wrap="false">
+            <n-text depth="3" style="font-size: 12px">行</n-text>
+            <n-input-number
+              :value="gridRowsDisplay"
+              :min="0"
+              :max="12"
+              size="small"
+              style="width: 64px"
+              placeholder="自动"
+              :show-button="false"
+              @update:value="onGridRows"
+            />
+          </n-space>
+          <n-button
+            type="primary"
+            secondary
+            :loading="isCopying"
+            :disabled="isCopying"
+            @click="$emit('copy-rendered')"
           >
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
-          <svg
-            v-else
-            class="h-[18px] w-[18px] shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <span>{{ copySuccess ? '已复制' : '复制HTML' }}</span>
-        </button>
-      </div>
+            {{ copySuccess ? '已复制' : '复制HTML' }}
+          </n-button>
+        </n-space>
+      </n-space>
+
       <section
         v-if="previewImages.length"
         :style="previewGridStyle"
@@ -79,42 +48,57 @@
         <div
           v-for="(img, i) in previewImages"
           :key="img.url"
-          draggable="true"
-          class="group relative overflow-hidden rounded border bg-gray-100 transition hover:ring-2 hover:ring-blue-400"
-          :class="{ 'opacity-50': draggingIndex === i }"
+          class="preview-cell-wrap"
+          :class="{ 'preview-cell-wrap--dragging': draggingIndex === i }"
           :style="previewCellStyle"
-          @dragstart="onDragStart($event, i)"
           @dragover.prevent="onDragOver($event, i)"
           @drop.prevent="onDrop(i)"
-          @dragend="draggingIndex = null"
         >
           <button
             type="button"
-            class="h-full w-full text-left"
+            class="preview-cell-btn"
             @click="enlargedImage = { url: img.url, alt: img.file?.name || '' }"
           >
             <img
               :src="img.url"
               :alt="img.file?.name || '图片'"
-              class="pointer-events-none h-full w-full object-cover"
+              class="preview-cell-img"
               :style="previewImgStyle"
               draggable="false"
             />
           </button>
-          <span
-            class="absolute right-1 top-1 rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition group-hover:opacity-100"
+          <span class="preview-cell-hint">拖动手柄排序</span>
+          <n-button
+            v-if="typeof removeUploadedImage === 'function'"
+            class="preview-cell-delete"
+            size="tiny"
+            quaternary
+            circle
+            type="error"
+            aria-label="删除此图"
+            @click.stop="onRemovePreview(img.url)"
           >
-            拖动排序
-          </span>
+            ×
+          </n-button>
+          <button
+            type="button"
+            class="reorder-handle"
+            title="拖动排序"
+            draggable="true"
+            @dragstart="onReorderDragStart($event, i)"
+            @dragend="onReorderDragEnd"
+            @mousedown.stop
+            @click.stop.prevent
+          >
+            ⋮⋮
+          </button>
         </div>
       </section>
-      <div
-        v-else
-        class="flex min-h-[120px] flex-col items-center justify-center rounded border border-dashed border-gray-200 bg-gray-50/50 py-6 text-center text-sm text-gray-400"
-      >
-        <span>上传图片后将在此展示九宫格预览</span>
-      </div>
-    </div>
+      <n-text v-else depth="3" style="display: block; padding: 8px 0; font-size: 13px">
+        在第三步勾选预览后，此处显示缩略图网格。
+      </n-text>
+    </n-card>
+
     <ImageLightbox
       :visible="!!enlargedImage"
       :image-url="enlargedImage?.url ?? ''"
@@ -125,33 +109,38 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed } from 'vue'
 import ImageLightbox from './ImageLightbox.vue'
 
 const props = defineProps({
   previewImages: { type: Array, default: () => [] },
-  previewAsideStyle: { type: Object, default: () => ({}) },
   previewCellStyle: { type: Object, default: () => ({}) },
   previewGridStyle: { type: Object, default: () => ({}) },
   previewImgStyle: { type: Object, default: () => ({}) },
-  previewPosition: { type: Object, default: null },
-  setAsideRef: { type: Function, default: null },
   isCopying: { type: Boolean, default: false },
   copySuccess: { type: Boolean, default: false },
   gridColumns: { type: Number, default: 3 },
   gridRows: { type: Number, default: 0 },
   reorderPreviewImages: { type: Function, default: null },
+  removeUploadedImage: { type: Function, default: null },
 })
 
-const emit = defineEmits(['drag-start', 'copy-rendered', 'update:gridColumns', 'update:gridRows'])
+const emit = defineEmits(['copy-rendered', 'update:gridColumns', 'update:gridRows'])
 
 const draggingIndex = ref(null)
 
-function onDragStart(e, index) {
+function onReorderDragStart(e, index) {
   draggingIndex.value = index
   e.dataTransfer.effectAllowed = 'move'
   e.dataTransfer.setData('text/plain', String(index))
   e.dataTransfer.setData('application/json', JSON.stringify({ index }))
+  try {
+    e.dataTransfer.setDragImage(e.target, 8, 8)
+  } catch (_) {}
+}
+
+function onReorderDragEnd() {
+  draggingIndex.value = null
 }
 
 function onDragOver(e, index) {
@@ -166,29 +155,130 @@ function onDrop(toIndex) {
   draggingIndex.value = null
 }
 
+function onRemovePreview(url) {
+  if (typeof props.removeUploadedImage !== 'function' || !url) return
+  props.removeUploadedImage(url)
+  if (enlargedImage.value?.url === url) enlargedImage.value = null
+}
+
 const gridCols = computed({
   get: () => Math.max(1, Math.min(12, props.gridColumns || 3)),
   set: (v) => emit('update:gridColumns', Math.max(1, Math.min(12, Number(v) || 3))),
 })
-const gridRowsVal = computed({
-  get: () => (props.gridRows > 0 ? props.gridRows : ''),
-  set: (v) => emit('update:gridRows', Math.max(0, Math.min(12, Number(v) || 0))),
-})
 
-const asideElRef = ref(null)
+function onGridCols(v) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return
+  gridCols.value = n
+}
+
+const gridRowsDisplay = computed(() => (props.gridRows > 0 ? props.gridRows : null))
+
+function onGridRows(v) {
+  const n = v === null || v === undefined || v === '' ? 0 : Number(v)
+  if (!Number.isFinite(n)) return
+  emit('update:gridRows', Math.max(0, Math.min(12, n)))
+}
+
 const enlargedImage = ref(null)
-onMounted(() => {
-  if (asideElRef.value && typeof props.setAsideRef === 'function') {
-    try {
-      props.setAsideRef(asideElRef.value)
-    } catch (_) {}
-  }
-})
-onBeforeUnmount(() => {
-  if (typeof props.setAsideRef === 'function') {
-    try {
-      props.setAsideRef(null)
-    } catch (_) {}
-  }
-})
 </script>
+
+<style scoped>
+.preview-aside {
+  position: sticky;
+  top: 16px;
+  width: 100%;
+}
+
+.preview-cell-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--n-border-radius);
+  border: 1px solid var(--n-border-color);
+  background: var(--n-color);
+  transition: opacity 0.2s, box-shadow 0.2s;
+}
+
+.preview-cell-wrap:hover {
+  box-shadow: 0 0 0 2px var(--n-color-target);
+}
+
+.preview-cell-wrap--dragging {
+  opacity: 0.5;
+}
+
+.preview-cell-btn {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.preview-cell-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.preview-cell-hint {
+  position: absolute;
+  right: 4px;
+  top: 28px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.preview-cell-wrap:hover .preview-cell-hint {
+  opacity: 1;
+}
+
+.preview-cell-delete {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  z-index: 4;
+  min-width: 22px !important;
+  width: 22px;
+  height: 22px;
+  padding: 0 !important;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.reorder-handle {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  z-index: 3;
+  display: flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 1;
+  color: #fff;
+  cursor: grab;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.reorder-handle:active {
+  cursor: grabbing;
+}
+</style>

@@ -1,47 +1,56 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="visible"
-      class="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/70 p-4"
-      @click.self="$emit('close')"
-    >
-      <button
-        type="button"
-        class="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white"
-        aria-label="关闭"
-        @click="$emit('close')"
-      >
-        ✕
-      </button>
-      <button
-        v-if="hasPrev"
-        type="button"
-        class="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white"
-        aria-label="上一张"
-        @click.stop="goPrev"
-      >
-        ‹
-      </button>
-      <button
-        v-if="hasNext"
-        type="button"
-        class="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-gray-600 hover:bg-white"
-        aria-label="下一张"
-        @click.stop="goNext"
-      >
-        ›
-      </button>
-      <div class="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-sm text-white">
-        {{ currentIndex + 1 }} / {{ totalCount }}
+  <n-modal
+    :show="visible"
+    :mask-closable="true"
+    :closable="true"
+    :auto-focus="false"
+    :trap-focus="false"
+    class="lightbox-modal"
+    @update:show="onUpdateShow"
+  >
+    <template #default>
+      <div class="lightbox-body" @click.self="$emit('close')">
+        <n-button
+          quaternary
+          circle
+          class="lightbox-close"
+          aria-label="关闭"
+          @click="$emit('close')"
+        >
+          ✕
+        </n-button>
+        <n-button
+          v-if="hasPrev"
+          quaternary
+          circle
+          class="lightbox-nav lightbox-nav--prev"
+          aria-label="上一张"
+          @click.stop="goPrev"
+        >
+          ‹
+        </n-button>
+        <n-button
+          v-if="hasNext"
+          quaternary
+          circle
+          class="lightbox-nav lightbox-nav--next"
+          aria-label="下一张"
+          @click.stop="goNext"
+        >
+          ›
+        </n-button>
+        <div class="lightbox-counter">
+          {{ currentIndex + 1 }} / {{ totalCount }}
+        </div>
+        <img
+          :src="currentImageUrl"
+          :alt="currentAlt"
+          class="lightbox-img"
+          @click.stop
+        />
       </div>
-      <img
-        :src="currentImageUrl"
-        :alt="currentAlt"
-        class="max-h-[90vh] max-w-[90vw] cursor-default object-contain"
-        @click.stop
-      />
-    </div>
-  </Teleport>
+    </template>
+  </n-modal>
 </template>
 
 <script setup>
@@ -75,6 +84,10 @@ const currentAlt = computed(() => {
   }
   return props.alt
 })
+
+function onUpdateShow(show) {
+  if (!show) emit('close')
+}
 
 function goPrev() {
   if (hasPrev.value) emit('change-index', currentIdx.value - 1)
@@ -114,3 +127,74 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown)
 })
 </script>
+
+<style scoped>
+.lightbox-body {
+  position: relative;
+  display: flex;
+  min-height: 50vh;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px 56px;
+}
+
+.lightbox-close {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 2;
+  font-size: 18px;
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  transform: translateY(-50%);
+  font-size: 22px;
+}
+
+.lightbox-nav--prev {
+  left: 8px;
+}
+
+.lightbox-nav--next {
+  right: 8px;
+}
+
+.lightbox-counter {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.lightbox-img {
+  max-height: 85vh;
+  max-width: 92vw;
+  cursor: default;
+  object-fit: contain;
+}
+</style>
+
+<style>
+.lightbox-modal.n-modal {
+  width: auto !important;
+  max-width: none;
+}
+
+.lightbox-modal .n-card {
+  background: transparent;
+  box-shadow: none;
+}
+
+.lightbox-modal .n-modal__content-wrapper {
+  background: rgba(0, 0, 0, 0.78);
+}
+</style>

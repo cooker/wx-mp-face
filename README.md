@@ -77,7 +77,7 @@ wx-mp-face/
 │   └── models/          # face-api.js 模型文件
 ├── src/
 │   ├── App.vue
-│   ├── composables/     # useFaceModels, useUploadedImages, usePreviewDrag, useGitHubRepoConfig
+│   ├── composables/     # useFaceModels, useUploadedImages, useGitHubRepoConfig
 │   ├── components/      # UploadSection, GitHubRepoConfig, GroupCropSection, PreviewAside, ...
 │   ├── utils/            # imageUtils, copyRenderedStyle
 │   ├── faceApi.js

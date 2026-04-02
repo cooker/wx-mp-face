@@ -1,113 +1,77 @@
 <template>
-  <section class="rounded-xl bg-white p-5 shadow sm:p-6 md:p-8">
-    <h2 class="mb-4 text-base font-medium text-gray-700 sm:mb-5 sm:text-lg">第二步：上传图片</h2>
-    <div class="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-stretch md:gap-6">
-      <label
-        class="flex min-h-[48px] cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 sm:min-h-0 sm:py-2.5 sm:text-sm md:px-8 md:py-3"
-      >
+  <n-card title="第二步：上传图片" :bordered="true" size="medium">
+    <n-space vertical :size="16">
+      <n-space :wrap="true" :size="12">
         <input
           ref="fileInputRef"
           type="file"
           accept="image/*"
           multiple
-          class="sr-only"
+          class="file-input-hidden"
           @change="onFileChange"
         />
-        选择图片
-      </label>
-      <button
-        v-if="uploadedImages.length"
-        type="button"
-        class="min-h-[48px] rounded-xl border border-gray-300 bg-white px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 sm:min-h-0 sm:py-2.5 sm:text-sm md:px-8 md:py-3"
-        @click="$emit('clear')"
+        <n-button type="primary" @click="triggerFileInput">选择图片</n-button>
+        <n-button v-if="uploadedImages.length" quaternary @click="$emit('clear')">清空图片</n-button>
+      </n-space>
+
+      <div
+        class="drop-zone"
+        :class="{ 'drop-zone--active': isDragging, 'drop-zone--disabled': isUploading }"
+        @dragover.prevent="$emit('update:isDragging', true)"
+        @dragleave.prevent="$emit('update:isDragging', false)"
+        @drop.prevent="onDrop"
+        @click="!isUploading && triggerFileInput()"
       >
-        清空图片
-      </button>
-    </div>
-    <div
-      class="relative mt-4 flex min-h-[180px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors sm:mt-6 sm:min-h-[200px] sm:gap-3 sm:px-6 sm:py-10 md:min-h-[240px] md:mt-8 md:py-12"
-      :class="[isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50/50', isUploading && 'pointer-events-none']"
-      @dragover.prevent="$emit('update:isDragging', true)"
-      @dragleave.prevent="$emit('update:isDragging', false)"
-      @drop.prevent="onDrop"
-      @click="triggerFileInput"
-    >
-      <template v-if="isUploading">
-        <span class="text-center text-base text-gray-600 sm:text-lg">上传中，请稍候…</span>
-      </template>
-      <template v-else>
-        <span class="text-center text-base text-gray-500 sm:text-lg md:text-xl">点击或拖拽图片到此处</span>
-        <span class="text-center text-sm text-gray-400">支持多选，先分组裁剪预览，确认后上传到 GitHub</span>
-      </template>
-    </div>
-    <div
-      v-if="isUploading"
-      class="mt-4 rounded-lg border border-blue-200 bg-blue-50/50 p-4"
-    >
-      <p class="mb-2 text-sm font-medium text-gray-700">
-        上传进度：{{ uploadProgress.current }}/{{ uploadProgress.total }}
-        <span class="ml-2 text-blue-600">({{ progressPercent }}%)</span>
-      </p>
-      <p v-if="uploadProgress.fileName" class="mb-2 truncate text-xs text-gray-500" :title="uploadProgress.fileName">
-        当前：{{ uploadProgress.fileName }}
-      </p>
-      <div class="h-3 w-full overflow-hidden rounded-full bg-gray-200">
-        <div
-          class="h-full rounded-full bg-blue-600 transition-all duration-300 ease-out"
-          :style="{ width: progressPercent + '%' }"
-        />
+        <template v-if="isUploading">
+          <n-text>上传中，请稍候…</n-text>
+        </template>
+        <template v-else>
+          <n-text depth="2">点击或拖拽图片到此处</n-text>
+          <n-text depth="3" style="font-size: 13px">支持多选，先分组裁剪预览，确认后上传到 GitHub</n-text>
+        </template>
       </div>
-    </div>
-    <div
-      v-if="displayThumbnails.length"
-      class="mt-4 rounded-lg border border-gray-200 bg-gray-50/50 p-3"
-    >
-      <p class="mb-2 text-xs font-medium text-gray-500">
-        {{ isUploading ? '上传进度' : '已上传图片' }}
-      </p>
-      <div class="flex flex-wrap gap-2">
-        <div
-          v-for="(item, i) in displayThumbnails"
-          :key="i"
-          class="relative h-16 w-16 shrink-0 overflow-hidden rounded border bg-gray-200"
-        >
-          <img
-            :src="item.url"
-            :alt="item.alt"
-            class="h-full w-full object-cover"
-            :class="{ 'opacity-50': item.status === 'pending' }"
-          />
-          <span
-            v-if="item.status === 'success'"
-            class="absolute right-0.5 top-0.5 rounded-full bg-green-500 px-1 py-0.5 text-[10px] text-white"
-          >
-            ✓
-          </span>
-          <span
-            v-else-if="item.status === 'uploading'"
-            class="absolute inset-0 flex items-center justify-center bg-black/30"
-          >
-            <span class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-          </span>
-          <span
-            v-else-if="item.status === 'pending'"
-            class="absolute right-0.5 top-0.5 rounded bg-gray-600/80 px-1 py-0.5 text-[10px] text-white"
-          >
-            待传
-          </span>
-        </div>
+
+      <div v-if="isUploading">
+        <n-text depth="2" style="display: block; margin-bottom: 8px">
+          上传进度：{{ uploadProgress.current }}/{{ uploadProgress.total }}
+          <n-text type="info" style="margin-left: 8px">({{ progressPercent }}%)</n-text>
+        </n-text>
+        <n-text v-if="uploadProgress.fileName" depth="3" style="display: block; margin-bottom: 8px; font-size: 12px" :title="uploadProgress.fileName">
+          当前：{{ uploadProgress.fileName }}
+        </n-text>
+        <n-progress type="line" :percentage="progressPercent" :height="10" indicator-placement="inside" processing />
       </div>
-    </div>
-    <p v-if="uploadProgress.status === 'error'" class="mt-2 flex items-center gap-1.5 text-sm text-red-500">
-      <span class="inline-block h-4 w-4 rounded-full bg-red-100 text-center text-xs leading-4">!</span>
-      {{ uploadProgress.errorMessage }}
-    </p>
-    <p v-else-if="uploadProgress.status === 'done'" class="mt-2 flex items-center gap-1.5 text-sm text-green-600">
-      <span class="inline-block h-4 w-4 rounded-full bg-green-100 text-center text-xs leading-4">✓</span>
-      上传完成，共 {{ uploadProgress.total }} 张
-    </p>
-    <p v-else-if="uploadedImages.length && !isUploading" class="mt-3 text-sm text-gray-500 sm:mt-4">已上传 {{ uploadedImages.length }} 张</p>
-  </section>
+
+      <n-card v-if="displayThumbnails.length" size="small" embedded :bordered="true">
+        <n-text depth="3" style="display: block; margin-bottom: 8px; font-size: 12px">
+          {{ isUploading ? '上传进度' : '已上传图片' }}
+        </n-text>
+        <n-space :size="8" :wrap="true">
+          <div
+            v-for="(item, i) in displayThumbnails"
+            :key="i"
+            class="thumb-wrap"
+          >
+            <img
+              :src="item.url"
+              :alt="item.alt"
+              class="thumb-img"
+              :class="{ 'thumb-img--muted': item.status === 'pending' }"
+            />
+            <n-tag v-if="item.status === 'success'" class="thumb-badge" size="tiny" type="success" round>✓</n-tag>
+            <div v-else-if="item.status === 'uploading'" class="thumb-overlay">
+              <n-spin size="small" />
+            </div>
+            <n-tag v-else-if="item.status === 'pending'" class="thumb-badge" size="tiny" type="default">待传</n-tag>
+          </div>
+        </n-space>
+      </n-card>
+
+      <n-alert v-if="uploadProgress.status === 'error'" type="error" :title="uploadProgress.errorMessage" />
+      <n-alert v-else-if="uploadProgress.status === 'done'" type="success" :title="`上传完成，共 ${uploadProgress.total} 张`" />
+      <n-text v-else-if="uploadedImages.length && !isUploading" depth="3">已上传 {{ uploadedImages.length }} 张</n-text>
+    </n-space>
+  </n-card>
 </template>
 
 <script setup>
@@ -119,6 +83,8 @@ const props = defineProps({
   isDragging: { type: Boolean, default: false },
   uploadProgress: { type: Object, default: () => ({ total: 0, current: 0, fileName: '', status: 'idle', errorMessage: '' }) },
 })
+
+const emit = defineEmits(['clear', 'update:isDragging', 'file-change', 'drop'])
 
 const isUploading = computed(() => props.uploadProgress?.status === 'uploading')
 const progressPercent = computed(() => {
@@ -165,8 +131,6 @@ const displayThumbnails = computed(() => {
   }))
 })
 
-const emit = defineEmits(['clear', 'update:isDragging'])
-
 const fileInputRef = ref(null)
 
 function triggerFileInput() {
@@ -184,3 +148,80 @@ function onDrop(e) {
   emit('drop', Array.from(e.dataTransfer?.files || []).filter((f) => f.type.startsWith('image/')))
 }
 </script>
+
+<style scoped>
+.file-input-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.drop-zone {
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 16px;
+  border: 2px dashed var(--n-border-color);
+  border-radius: var(--n-border-radius);
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+  background: var(--n-color-modal);
+}
+
+.drop-zone--active {
+  border-color: var(--n-color-target);
+  background: var(--n-color-hover-modal);
+}
+
+.drop-zone--disabled {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.thumb-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: var(--n-border-radius);
+  border: 1px solid var(--n-border-color);
+  background: var(--n-color);
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-img--muted {
+  opacity: 0.5;
+}
+
+.thumb-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+.thumb-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 640px) {
+  .drop-zone {
+    min-height: 220px;
+    padding: 40px 24px;
+  }
+}
+</style>

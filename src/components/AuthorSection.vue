@@ -1,9 +1,27 @@
 <template>
-  <section class="rounded-xl border border-gray-200 bg-white p-3 shadow">
-    <p class="mb-2 text-center text-sm font-medium text-gray-600">作者</p>
-    <img src="/zsm.jpg" alt="作者" class="w-full rounded-lg object-cover" />
-  </section>
+  <n-card title="作者" size="small" :bordered="true">
+    <n-image
+      src="/zsm.jpg"
+      alt="作者"
+      object-fit="cover"
+      preview-disabled
+      class="author-img"
+    />
+  </n-card>
 </template>
 
 <script setup>
 </script>
+
+<style scoped>
+.author-img {
+  width: 100%;
+  border-radius: var(--n-border-radius);
+  overflow: hidden;
+}
+
+.author-img :deep(img) {
+  width: 100%;
+  display: block;
+}
+</style>

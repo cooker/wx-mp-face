@@ -1,77 +1,99 @@
 <template>
-  <div class="min-h-screen bg-gray-100 p-4 sm:p-6 md:p-8">
-    <div class="mx-auto max-w-6xl">
-      <h1 class="text-xl font-semibold text-gray-800 sm:text-2xl">人脸裁剪排列</h1>
-      <p v-if="!modelsReady" class="mt-2 text-gray-500">正在加载人脸检测模型…</p>
-      <p v-else class="mt-2 text-green-600">模型已就绪</p>
-
-      <div class="mt-6 flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-        <div class="min-w-0 flex-1">
-          <template v-if="modelsReady">
-            <GitHubRepoConfig
-              v-model:owner="githubOwner"
-              v-model:repo="githubRepo"
-              v-model:branch="githubBranch"
-              v-model:path-prefix="githubPathPrefix"
-              v-model:token="githubToken"
-              :get-jsdelivr-url="getJsdelivrUrl"
-              :get-jsdelivr-url-for-repo="getJsdelivrUrlForRepo"
-              :get-default-path-prefix="getDefaultPathPrefix"
-              :set-path-prefix-to-current="setPathPrefixToCurrent"
-              :upload-file-to-github="uploadFileToGitHub"
-              :export-config="exportConfig"
-              :import-config="importConfig"
-              :uploaded-images="uploadedImages"
-              @add-remote="addRemoteImage"
-            />
-            <UploadSection
-              class="mt-6"
-              :uploaded-images="uploadedImages"
-              :uploading-files="[]"
-              :is-dragging="isDragging"
-              :upload-progress="uploadProgress"
-              @update:is-dragging="isDragging = $event"
-              @file-change="handleFileUpload"
-              @drop="handleFileUpload"
-              @clear="clearImages"
-            />
-            <div ref="step3Ref">
-              <GroupCropSection
-                :groups="groups"
-                :preview-images="previewImages"
-                :upload-progress="uploadProgress"
-                v-model:crop-width="cropWidth"
-                v-model:crop-height="cropHeight"
-                v-model:checked-image-urls="checkedImageUrls"
-                @open-preview="openPreview"
-                @confirm-upload="handleConfirmUpload"
-              />
+  <n-config-provider :theme-overrides="themeOverrides">
+    <n-layout class="app-layout" embedded content-style="padding: 16px 24px 32px; min-height: 100vh; background: var(--n-color)">
+      <n-layout-content>
+        <div class="app-inner">
+          <n-space vertical :size="16">
+            <div>
+              <n-h1 style="margin: 0; font-size: 22px; font-weight: 600">人脸裁剪排列</n-h1>
+              <n-text v-if="!modelsReady" depth="3" style="display: block; margin-top: 8px">
+                正在加载人脸检测模型…
+              </n-text>
+              <n-text v-else type="success" style="display: block; margin-top: 8px">模型已就绪</n-text>
             </div>
-          </template>
-        </div>
 
-        <div ref="previewAsideWrapRef" class="flex w-72 max-w-[90vw] shrink-0 flex-col gap-4 lg:w-80">
-          <PreviewAside
-            v-if="modelsReady"
-            :preview-images="previewImages"
-            :preview-aside-style="previewAsideStyle"
-            :preview-cell-style="previewCellStyle"
-            :preview-grid-style="previewGridStyle"
-            :preview-img-style="previewImgStyle"
-            :preview-position="previewPosition"
-            :set-aside-ref="setPreviewAsideRef"
-            :copy-success="copySuccess"
-            :is-copying="isCopying"
-            v-model:grid-columns="gridColumns"
-            v-model:grid-rows="gridRows"
-            :reorder-preview-images="reorderPreviewImages"
-            @drag-start="onPreviewDragStart"
-            @copy-rendered="handleCopyRendered"
-          />
-          <AuthorSection v-if="modelsReady" />
+            <div v-if="modelsReady" class="main-columns">
+              <div class="main-left">
+                <n-space vertical :size="24">
+                  <GitHubRepoConfig
+                    v-model:owner="githubOwner"
+                    v-model:repo="githubRepo"
+                    v-model:branch="githubBranch"
+                    v-model:path-prefix="githubPathPrefix"
+                    v-model:token="githubToken"
+                    :get-jsdelivr-url="getJsdelivrUrl"
+                    :get-jsdelivr-url-for-repo="getJsdelivrUrlForRepo"
+                    :get-default-path-prefix="getDefaultPathPrefix"
+                    :set-path-prefix-to-current="setPathPrefixToCurrent"
+                    :upload-file-to-github="uploadFileToGitHub"
+                    :export-config="exportConfig"
+                    :import-config="importConfig"
+                    :uploaded-images="uploadedImages"
+                    @add-remote="addRemoteImage"
+                  />
+                  <UploadSection
+                    :uploaded-images="uploadedImages"
+                    :uploading-files="[]"
+                    :is-dragging="isDragging"
+                    :upload-progress="uploadProgress"
+                    @update:is-dragging="isDragging = $event"
+                    @file-change="handleFileUpload"
+                    @drop="handleFileUpload"
+                    @clear="clearImages"
+                  />
+                  <n-empty
+                    v-if="!previewImages.length"
+                    description="上传图片后将在此展示九宫格预览"
+                    size="small"
+                    style="padding: 8px 0"
+                  />
+                  <div ref="step3Ref">
+                    <GroupCropSection
+                      :groups="groups"
+                      :preview-images="previewImages"
+                      :upload-progress="uploadProgress"
+                      v-model:crop-width="cropWidth"
+                      v-model:crop-height="cropHeight"
+                      v-model:checked-image-urls="checkedImageUrls"
+                      @open-preview="openPreview"
+                      @confirm-upload="handleConfirmUpload"
+                    />
+                  </div>
+                </n-space>
+              </div>
+              <div ref="previewAsideWrapRef" class="main-right">
+                <n-space vertical :size="16">
+                  <div class="preview-outer-header">
+                    <n-text strong style="font-size: 15px">实时预览</n-text>
+                    <n-text
+                      v-if="previewImages.length"
+                      depth="3"
+                      style="display: block; margin-top: 6px; font-size: 12px"
+                    >
+                      拖动手柄排序；点击图片放大；右上角可删除
+                    </n-text>
+                  </div>
+                  <PreviewAside
+                    :preview-images="previewImages"
+                    :preview-cell-style="previewCellStyle"
+                    :preview-grid-style="previewGridStyle"
+                    :preview-img-style="previewImgStyle"
+                    :copy-success="copySuccess"
+                    :is-copying="isCopying"
+                    v-model:grid-columns="gridColumns"
+                    v-model:grid-rows="gridRows"
+                    :reorder-preview-images="reorderPreviewImages"
+                    :remove-uploaded-image="removeUploadedImage"
+                    @copy-rendered="handleCopyRendered"
+                  />
+                  <AuthorSection />
+                </n-space>
+              </div>
+            </div>
+          </n-space>
         </div>
-      </div>
-    </div>
+      </n-layout-content>
+    </n-layout>
 
     <PreviewModal
       :visible="showPreview"
@@ -84,14 +106,14 @@
       :preview-img-style="previewImgStyle"
       @close="closePreview"
     />
-  </div>
+  </n-config-provider>
 </template>
 
 <script setup>
 import { ref, nextTick } from 'vue'
+import { createDiscreteApi } from 'naive-ui'
 import { useFaceModels } from './composables/useFaceModels.js'
 import { useUploadedImages } from './composables/useUploadedImages.js'
-import { usePreviewDrag } from './composables/usePreviewDrag.js'
 import { useGitHubRepoConfig } from './composables/useGitHubRepoConfig.js'
 import { useClipboard } from './composables/useClipboard.js'
 import { getRenderedStyleHtml } from './utils/copyRenderedStyle.js'
@@ -102,6 +124,14 @@ import GroupCropSection from './components/GroupCropSection.vue'
 import PreviewAside from './components/PreviewAside.vue'
 import AuthorSection from './components/AuthorSection.vue'
 import PreviewModal from './components/PreviewModal.vue'
+
+const { message } = createDiscreteApi(['message'])
+
+const themeOverrides = {
+  common: {
+    borderRadius: '10px',
+  },
+}
 
 const { modelsReady } = useFaceModels()
 
@@ -123,6 +153,7 @@ const {
   addRemoteImage,
   replaceLocalWithRemoteUrls,
   reorderPreviewImages,
+  removeUploadedImage,
   clearImages,
 } = useUploadedImages()
 
@@ -147,7 +178,7 @@ const uploadProgress = ref({
   total: 0,
   current: 0,
   fileName: '',
-  status: 'idle', // idle | uploading | done | error
+  status: 'idle',
   errorMessage: '',
 })
 
@@ -157,10 +188,6 @@ function openPreview() {
 function closePreview() {
   showPreview.value = false
 }
-function setPreviewAsideRef(el) {
-  if (previewAsideRef) previewAsideRef.value = el
-}
-
 async function handleFileUpload(files) {
   const list = Array.from(files || []).filter((f) => f.type?.startsWith('image/'))
   if (!list.length) return
@@ -185,6 +212,7 @@ async function handleConfirmUpload() {
       status: 'error',
       errorMessage: '请先在第一步配置 owner、repo 和 Token',
     }
+    message.warning('请先在第一步配置 owner、repo 和 Token')
     return
   }
 
@@ -265,10 +293,12 @@ async function handleConfirmUpload() {
       status: 'error',
       errorMessage: (failed.reason?.message || '上传失败') + `，${failedCount} 张失败可重试`,
     }
+    message.error(uploadProgress.value.errorMessage)
     return
   }
 
   uploadProgress.value = { ...uploadProgress.value, status: 'done' }
+  message.success('上传完成')
   nextTick(() => {
     previewAsideWrapRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   })
@@ -278,13 +308,6 @@ async function handleConfirmUpload() {
     }
   }, 2000)
 }
-
-const {
-  previewAsideRef,
-  previewPosition,
-  previewAsideStyle,
-  onPreviewDragStart,
-} = usePreviewDrag()
 
 const { isCopying, copySuccess, copyHtml } = useClipboard()
 
@@ -299,9 +322,52 @@ async function handleCopyRendered() {
     )
     const success = await copyHtml(html)
     if (!success) throw new Error('copy failed')
+    message.success('已复制到剪贴板')
   } catch (e) {
     console.error('复制失败:', e)
-    alert('复制失败，请手动复制')
+    message.error('复制失败，请手动复制')
   }
 }
 </script>
+
+<style scoped>
+.app-inner {
+  max-width: 1152px;
+  margin: 0 auto;
+}
+
+.main-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.main-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.main-right {
+  width: 100%;
+  max-width: 90vw;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .main-columns {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 32px;
+  }
+
+  .main-right {
+    width: 320px;
+    max-width: 320px;
+  }
+}
+
+.preview-outer-header {
+  padding-bottom: 4px;
+}
+</style>

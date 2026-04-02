@@ -1,37 +1,34 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="visible"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      @click.self="$emit('close')"
+  <n-modal
+    :show="visible"
+    preset="card"
+    :title="modalTitle"
+    :style="{ width: 'min(400px, 92vw)' }"
+    :bordered="false"
+    size="huge"
+    :segmented="{ content: true }"
+    @update:show="onUpdateShow"
+  >
+    <section
+      class="preview-modal-grid"
+      :style="gridStyle"
+      aria-label="图片排列"
     >
-      <div class="max-h-[90vh] overflow-auto rounded-lg bg-white p-4 shadow-xl">
-        <div class="mb-3 flex items-center justify-between">
-          <span class="text-sm text-gray-600">裁剪 {{ cropWidth }}×{{ cropHeight }}（{{ gridColumns }} 列{{ gridRows ? ` × ${gridRows} 行` : '' }}）</span>
-          <button type="button" class="text-gray-400 hover:text-gray-600" @click="$emit('close')">✕</button>
-        </div>
-        <section
-          class="max-w-[min(360px,85vw)] gap-1.5"
-          :style="gridStyle"
-          aria-label="图片排列"
-        >
-          <div
-            v-for="(img, i) in previewImages"
-            :key="img.url"
-            class="overflow-hidden rounded border bg-gray-100"
-            :style="previewCellStyle"
-          >
-            <img
-              :src="img.url"
-              :alt="img.file?.name || '图片'"
-              class="h-full w-full object-cover"
-              :style="previewImgStyle"
-            />
-          </div>
-        </section>
+      <div
+        v-for="(img, i) in previewImages"
+        :key="img.url"
+        class="preview-modal-cell"
+        :style="previewCellStyle"
+      >
+        <img
+          :src="img.url"
+          :alt="img.file?.name || '图片'"
+          class="preview-modal-img"
+          :style="previewImgStyle"
+        />
       </div>
-    </div>
-  </Teleport>
+    </section>
+  </n-modal>
 </template>
 
 <script setup>
@@ -48,6 +45,13 @@ const props = defineProps({
   previewImgStyle: { type: Object, default: () => ({}) },
 })
 
+const emit = defineEmits(['close'])
+
+const modalTitle = computed(() => {
+  const rows = props.gridRows > 0 ? ` × ${props.gridRows} 行` : ''
+  return `裁剪 ${props.cropWidth}×${props.cropHeight}（${props.gridColumns} 列${rows}）`
+})
+
 const gridStyle = computed(() => {
   const cols = Math.max(1, Math.min(12, props.gridColumns || 3))
   const rows = props.gridRows > 0 ? Math.max(1, Math.min(12, props.gridRows)) : 0
@@ -59,5 +63,27 @@ const gridStyle = computed(() => {
   }
 })
 
-defineEmits(['close'])
+function onUpdateShow(show) {
+  if (!show) emit('close')
+}
 </script>
+
+<style scoped>
+.preview-modal-grid {
+  max-width: min(360px, 85vw);
+}
+
+.preview-modal-cell {
+  overflow: hidden;
+  border-radius: var(--n-border-radius);
+  border: 1px solid var(--n-border-color);
+  background: var(--n-color);
+}
+
+.preview-modal-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+</style>

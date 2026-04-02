@@ -1,118 +1,102 @@
 <template>
-  <section class="rounded-xl border border-gray-200 bg-white p-4 shadow">
-    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <h2 class="text-sm font-medium text-gray-700">第一步：设置 GitHub 仓库配置</h2>
-      <button
-        v-if="isConfigured"
-        type="button"
-        class="text-xs text-blue-600 hover:text-blue-700"
-        @click="isCollapsed = !isCollapsed"
-      >
-        {{ isCollapsed ? '展开配置' : '收起' }}
-      </button>
-    </div>
-    <template v-if="!isCollapsed">
-    <p class="mb-3 text-xs text-gray-500">
-      配置后可用 <code class="rounded bg-gray-100 px-1">https://fastly.jsdelivr.net/gh/owner/repo@branch/路径</code> 格式展示图片
-    </p>
-    <div class="mb-3 grid gap-2 sm:grid-cols-2">
-      <div>
-        <label class="mb-1 block text-xs text-gray-600">owner</label>
-        <input
-          v-model="owner"
-          type="text"
-          placeholder="如 bucketio"
-          class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-        />
-      </div>
-      <div>
-        <label class="mb-1 block text-xs text-gray-600">repo</label>
-        <input
-          v-model="repo"
-          type="text"
-          placeholder="如 img18 或 img[0-20]（随机）"
-          class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-        />
-        <p class="mt-0.5 text-xs text-gray-400">支持 img[0,20] 或 img[0-20] 表示 img0～img20 随机选一个</p>
-      </div>
-      <div>
-        <label class="mb-1 block text-xs text-gray-600">branch</label>
-        <input
-          v-model="branch"
-          type="text"
-          placeholder="main"
-          class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-        />
-      </div>
-      <div class="sm:col-span-2">
-        <label class="mb-1 block text-xs text-gray-600">pathPrefix（根据当前时间自动生成，可选）</label>
-        <div class="flex flex-wrap gap-2">
-          <input
-            v-model="pathPrefix"
-            type="text"
-            :placeholder="`如 ${defaultPathPrefixPlaceholder}`"
-            class="min-w-0 flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm"
-          />
-          <button
-            type="button"
-            class="shrink-0 rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-            @click="setPathPrefixToCurrent?.()"
-          >
-            设为当前日期
-          </button>
-        </div>
-      </div>
-      <div class="sm:col-span-2">
-        <label class="mb-1 block text-xs text-gray-600">GitHub Token（可选）</label>
-        <input
-          v-model="token"
-          type="password"
-          autocomplete="off"
-          placeholder="用于 GitHub API，仅保存在本机"
-          class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-        />
-        <p class="mt-0.5 text-xs text-gray-400">仅保存在本机 localStorage，用于调用 GitHub API 等</p>
-      </div>
-    </div>
-    <div class="mb-3 flex flex-wrap gap-2">
-      <button
-        type="button"
-        class="rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
-        @click="onExport"
-      >
-        导出配置
-      </button>
-      <label class="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
-        <input type="file" accept=".json,application/json" class="sr-only" @change="onImportFile" />
-        导入配置
-      </label>
-    </div>
-    <p v-if="importError" class="mb-2 text-xs text-red-500">{{ importError }}</p>
-    <div v-if="uploadedFileNames.length" class="mb-2">
-      <p class="mb-1.5 text-xs text-gray-600">添加远程图片（先上传到 GitHub 再添加 CDN 链接，需配置 Token）</p>
-      <div class="flex flex-wrap gap-1.5">
-        <button
-          v-for="name in uploadedFileNames"
-          :key="name"
-          type="button"
-          class="rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-          :title="pathPrefix ? `${pathPrefix}/${name}` : name"
-          :disabled="uploadingName !== ''"
-          @click="addByName(name)"
-        >
-          {{ name }}{{ uploadingName === name ? ' 上传中…' : '' }}
-        </button>
-      </div>
-      <p v-if="uploadError" class="mt-1 text-xs text-red-500">{{ uploadError }}</p>
-    </div>
-    <p v-if="exampleUrl" class="truncate text-xs text-gray-400" :title="exampleUrl">
-      示例：{{ exampleUrl }}
-    </p>
+  <n-card :bordered="true" size="small">
+    <template #header>
+      <n-space justify="space-between" align="center" style="width: 100%">
+        <span class="card-title">第一步：设置 GitHub 仓库配置</span>
+        <n-button v-if="isConfigured" text type="primary" size="tiny" @click="isCollapsed = !isCollapsed">
+          {{ isCollapsed ? '展开配置' : '收起' }}
+        </n-button>
+      </n-space>
     </template>
-    <p v-else-if="isConfigured" class="text-xs text-gray-500">
+
+    <template v-if="!isCollapsed">
+      <n-space vertical :size="16">
+        <n-text depth="3" style="font-size: 12px">
+          配置后可用
+          <n-code size="small">https://fastly.jsdelivr.net/gh/owner/repo@branch/路径</n-code>
+          格式展示图片
+        </n-text>
+
+        <div class="form-grid">
+          <n-form-item label="owner" label-placement="top" :show-feedback="false">
+            <n-input v-model:value="owner" placeholder="如 bucketio" clearable />
+          </n-form-item>
+          <n-form-item label="repo" label-placement="top" :show-feedback="false">
+            <n-input v-model:value="repo" placeholder="如 img18 或 img[0-20]（随机）" clearable />
+            <n-text depth="3" style="font-size: 11px; margin-top: 4px; display: block">
+              支持 img[0,20] 或 img[0-20] 表示 img0～img20 随机选一个
+            </n-text>
+          </n-form-item>
+          <n-form-item label="branch" label-placement="top" :show-feedback="false">
+            <n-input v-model:value="branch" placeholder="main" clearable />
+          </n-form-item>
+          <n-form-item class="form-grid-full" label="pathPrefix（根据当前时间自动生成，可选）" label-placement="top" :show-feedback="false">
+            <n-input-group>
+              <n-input
+                v-model:value="pathPrefix"
+                :placeholder="`如 ${defaultPathPrefixPlaceholder}`"
+                clearable
+              />
+              <n-button @click="setPathPrefixToCurrent?.()">设为当前日期</n-button>
+            </n-input-group>
+          </n-form-item>
+          <n-form-item class="form-grid-full" label="GitHub Token（可选）" label-placement="top" :show-feedback="false">
+            <n-input
+              v-model:value="token"
+              type="password"
+              show-password-on="click"
+              placeholder="用于 GitHub API，仅保存在本机"
+              autocomplete="off"
+              clearable
+            />
+            <n-text depth="3" style="font-size: 11px; margin-top: 4px; display: block">
+              仅保存在本机 localStorage，用于调用 GitHub API 等
+            </n-text>
+          </n-form-item>
+        </div>
+
+        <n-space :wrap="true" :size="8">
+          <n-button size="small" @click="onExport">导出配置</n-button>
+          <input
+            ref="importInputRef"
+            type="file"
+            accept=".json,application/json"
+            class="file-input-hidden"
+            @change="onImportFile"
+          />
+          <n-button size="small" @click="importInputRef?.click()">导入配置</n-button>
+        </n-space>
+
+        <n-alert v-if="importError" type="error" :title="importError" />
+
+        <div v-if="uploadedFileNames.length">
+          <n-text depth="2" style="font-size: 12px; display: block; margin-bottom: 8px">
+            添加远程图片（先上传到 GitHub 再添加 CDN 链接，需配置 Token）
+          </n-text>
+          <n-space :wrap="true" :size="8">
+            <n-button
+              v-for="name in uploadedFileNames"
+              :key="name"
+              size="tiny"
+              :disabled="uploadingName !== ''"
+              :loading="uploadingName === name"
+              @click="addByName(name)"
+            >
+              {{ name }}
+            </n-button>
+          </n-space>
+          <n-alert v-if="uploadError" type="error" :title="uploadError" style="margin-top: 8px" />
+        </div>
+
+        <n-text v-if="exampleUrl" depth="3" style="font-size: 11px; display: block" :title="exampleUrl">
+          示例：{{ exampleUrl }}
+        </n-text>
+      </n-space>
+    </template>
+    <n-text v-else-if="isConfigured" depth="3" style="font-size: 12px">
       已配置 {{ owner }}/{{ repo }}<template v-if="branch"> @{{ branch }}</template>
-    </p>
-  </section>
+    </n-text>
+  </n-card>
 </template>
 
 <script setup>
@@ -142,6 +126,8 @@ const branch = computed({ get: () => props.branch, set: (v) => emit('update:bran
 const pathPrefix = computed({ get: () => props.pathPrefix, set: (v) => emit('update:pathPrefix', v) })
 const token = computed({ get: () => props.token, set: (v) => emit('update:token', v) })
 
+const importInputRef = ref(null)
+
 const defaultPathPrefixPlaceholder = computed(() =>
   typeof props.getDefaultPathPrefix === 'function' ? props.getDefaultPathPrefix() : '2026/02/02'
 )
@@ -150,7 +136,6 @@ const isConfigured = computed(() => !!(props.owner?.trim() && props.repo?.trim()
 const isCollapsed = ref(false)
 watch(isConfigured, (v) => { if (v) isCollapsed.value = true }, { immediate: true })
 
-/** 本地图片（有 file）：name -> { name, file }，用于上传到 GitHub */
 const localImagesByName = computed(() => {
   const map = new Map()
   for (const img of props.uploadedImages || []) {
@@ -202,7 +187,6 @@ function buildPath(name) {
   return prefix ? `${prefix}/${name}`.replace(/\/+/g, '/') : name
 }
 
-/** .jfif 统一改为 .jpg 再上传 */
 function normalizeUploadName(name) {
   if (!name || typeof name !== 'string') return name
   return name.replace(/\.jfif$/i, '.jpg')
@@ -233,3 +217,34 @@ async function addByName(name) {
   }
 }
 </script>
+
+<style scoped>
+.card-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.file-input-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .form-grid-full {
+    grid-column: 1 / -1;
+  }
+}
+</style>

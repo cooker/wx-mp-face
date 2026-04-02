@@ -1,110 +1,83 @@
 <template>
-  <section class="mt-6 rounded-xl bg-white p-5 shadow sm:mt-8 sm:p-6 md:p-8">
-    <h2 class="mb-3 text-sm font-medium text-gray-700">第三步：分组 + 裁剪 + 勾选预览</h2>
+  <n-card title="第三步：分组 + 裁剪 + 勾选预览" :bordered="true" class="group-crop-card">
     <template v-if="groups.length">
-      <div class="mb-4 flex flex-wrap items-center gap-4">
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-gray-600">裁剪分辨率</span>
-          <input
+      <n-space vertical :size="16">
+        <n-space :wrap="true" :size="12" align="center">
+          <n-text depth="2">裁剪分辨率</n-text>
+          <n-input-number
             :value="cropWidth"
-            type="number"
-            min="1"
-            class="w-20 rounded border px-2 py-1 text-sm"
-            @input="$emit('update:cropWidth', Number(($event.target).value))"
+            :min="1"
+            :max="4096"
+            size="small"
+            style="width: 100px"
+            @update:value="onCropWidth"
           />
-          <span class="text-gray-500">×</span>
-          <input
+          <n-text depth="3">×</n-text>
+          <n-input-number
             :value="cropHeight"
-            type="number"
-            min="1"
-            class="w-20 rounded border px-2 py-1 text-sm"
-            @input="$emit('update:cropHeight', Number(($event.target).value))"
+            :min="1"
+            :max="4096"
+            size="small"
+            style="width: 100px"
+            @update:value="onCropHeight"
           />
-        </div>
-        <button
-          type="button"
-          class="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-          :disabled="previewImages.length === 0"
-          @click="$emit('open-preview')"
-        >
-          预览选中（{{ previewImages.length }} 张）
-        </button>
-        <button
-          type="button"
-          class="rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50"
-          :disabled="localPreviewCount === 0 || isUploading"
-          @click="$emit('confirm-upload')"
-        >
-          {{ isUploading ? `上传中 ${uploadProgress?.current ?? 0}/${uploadProgress?.total ?? 0}…` : '确认上传' }}
-        </button>
-      </div>
-      <div v-if="uploadProgress?.status === 'error'" class="mb-4 flex flex-wrap items-center gap-2">
-        <p class="text-sm text-red-500">{{ uploadProgress.errorMessage }}</p>
-        <button
-          v-if="localPreviewCount > 0"
-          type="button"
-          class="rounded bg-amber-500 px-3 py-1.5 text-xs text-white hover:bg-amber-600"
-          @click="$emit('confirm-upload')"
-        >
-          重试上传
-        </button>
-      </div>
-      <div class="space-y-4">
-        <div
-          v-for="g in groups"
-          :key="g.key"
-          class="flex flex-wrap items-start gap-3 rounded border border-gray-200 bg-gray-50 p-3"
-        >
-          <div class="flex w-full items-center justify-between">
-            <span class="text-sm font-medium text-gray-700">尺寸 {{ g.key }}</span>
-            <div class="flex gap-1">
-              <button
-                type="button"
-                class="text-xs text-blue-600 hover:text-blue-700"
-                @click="checkGroup(g.items, true)"
+          <n-button type="primary" :disabled="previewImages.length === 0" @click="$emit('open-preview')">
+            预览选中（{{ previewImages.length }} 张）
+          </n-button>
+          <n-button type="success" :disabled="localPreviewCount === 0 || isUploading" :loading="isUploading" @click="$emit('confirm-upload')">
+            {{ isUploading ? `上传中 ${uploadProgress?.current ?? 0}/${uploadProgress?.total ?? 0}…` : '确认上传' }}
+          </n-button>
+        </n-space>
+
+        <n-space v-if="uploadProgress?.status === 'error'" :wrap="true" align="center">
+          <n-text type="error">{{ uploadProgress.errorMessage }}</n-text>
+          <n-button v-if="localPreviewCount > 0" size="small" type="warning" @click="$emit('confirm-upload')">
+            重试上传
+          </n-button>
+        </n-space>
+
+        <n-space vertical :size="16">
+          <n-card
+            v-for="g in groups"
+            :key="g.key"
+            size="small"
+            embedded
+            :bordered="true"
+            :title="`尺寸 ${g.key}`"
+          >
+            <template #header-extra>
+              <n-space :size="8" align="center">
+                <n-button text type="primary" size="tiny" @click="checkGroup(g.items, true)">全选</n-button>
+                <n-divider vertical style="margin: 0" />
+                <n-button text size="tiny" @click="checkGroup(g.items, false)">取消</n-button>
+              </n-space>
+            </template>
+            <n-space :wrap="true" :size="8">
+              <div
+                v-for="(img, i) in g.items"
+                :key="img.url"
+                class="thumb-cell"
+                :class="{ 'thumb-cell--checked': isChecked(img.url) }"
               >
-                全选
-              </button>
-              <span class="text-gray-300">|</span>
-              <button
-                type="button"
-                class="text-xs text-gray-500 hover:text-gray-700"
-                @click="checkGroup(g.items, false)"
-              >
-                取消
-              </button>
-            </div>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <div
-              v-for="(img, i) in g.items"
-              :key="img.url"
-              class="relative flex h-20 w-20 overflow-hidden rounded border transition hover:ring-2 hover:ring-blue-400"
-              :class="isChecked(img.url) ? 'ring-2 ring-blue-400' : 'bg-gray-200'"
-            >
-              <input
-                type="checkbox"
-                :checked="isChecked(img.url)"
-                class="absolute left-1 top-1 z-10 cursor-pointer rounded border-gray-300"
-                @change="toggleCheck(img.url)"
-              />
-              <img
-                :src="img.url"
-                :alt="img.file?.name || '图片'"
-                class="h-full w-full cursor-pointer object-cover"
-                @click="openImage(g.key, i)"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+                <n-checkbox
+                  class="thumb-checkbox"
+                  :checked="isChecked(img.url)"
+                  @update:checked="() => toggleCheck(img.url)"
+                />
+                <img
+                  :src="img.url"
+                  :alt="img.file?.name || '图片'"
+                  class="thumb-img"
+                  @click="openImage(g.key, i)"
+                />
+              </div>
+            </n-space>
+          </n-card>
+        </n-space>
+      </n-space>
     </template>
-    <div
-      v-else
-      class="flex min-h-[140px] flex-col items-center justify-center rounded border border-dashed border-gray-200 bg-gray-50/50 py-8 text-center text-sm text-gray-400"
-    >
-      <span>上传图片后将在此展示尺寸分组与缩略图</span>
-    </div>
+    <n-empty v-else description="上传图片后将在此展示尺寸分组与缩略图" style="padding: 32px 0" />
+
     <ImageLightbox
       :visible="enlargedImageIndex !== null"
       :image-list="allImages"
@@ -112,7 +85,7 @@
       @close="enlargedImageIndex = null"
       @change-index="enlargedImageIndex = $event"
     />
-  </section>
+  </n-card>
 </template>
 
 <script setup>
@@ -134,6 +107,16 @@ const isUploading = computed(() => props.uploadProgress?.status === 'uploading')
 const localPreviewCount = computed(() => props.previewImages.filter((img) => img.file).length)
 
 const checkedSet = computed(() => new Set(props.checkedImageUrls || []))
+
+function onCropWidth(v) {
+  const n = Number(v)
+  if (Number.isFinite(n) && n > 0) emit('update:cropWidth', Math.floor(n))
+}
+
+function onCropHeight(v) {
+  const n = Number(v)
+  if (Number.isFinite(n) && n > 0) emit('update:cropHeight', Math.floor(n))
+}
 
 function isChecked(url) {
   if (!url) return false
@@ -185,3 +168,43 @@ function openImage(groupKey, itemIndex) {
   enlargedImageIndex.value = index
 }
 </script>
+
+<style scoped>
+.group-crop-card :deep(.n-card-header) {
+  padding-bottom: 8px;
+}
+
+.thumb-cell {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border-radius: var(--n-border-radius);
+  border: 1px solid var(--n-border-color);
+  background: var(--n-color);
+  transition: box-shadow 0.2s;
+}
+
+.thumb-cell:hover {
+  box-shadow: 0 0 0 2px var(--n-color-target);
+}
+
+.thumb-cell--checked {
+  box-shadow: 0 0 0 2px var(--n-color-target);
+}
+
+.thumb-checkbox {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  z-index: 2;
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: pointer;
+  display: block;
+}
+</style>
