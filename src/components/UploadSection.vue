@@ -56,9 +56,18 @@
               :src="item.url"
               :alt="item.alt"
               class="thumb-img"
-              :class="{ 'thumb-img--muted': item.status === 'pending' }"
+              :class="{
+                'thumb-img--muted': item.status === 'pending',
+                'thumb-img--failed': item.status === 'failed',
+              }"
             />
-            <n-tag v-if="item.status === 'success'" class="thumb-badge" size="tiny" type="success" round>✓</n-tag>
+            <n-tooltip v-if="item.status === 'failed'" placement="top">
+              <template #trigger>
+                <n-tag class="thumb-badge thumb-badge--fail" size="tiny" type="warning" round>!</n-tag>
+              </template>
+              上传失败，请在第三步点击「重试上传」或删除后重新添加
+            </n-tooltip>
+            <n-tag v-else-if="item.status === 'success'" class="thumb-badge" size="tiny" type="success" round>✓</n-tag>
             <div v-else-if="item.status === 'uploading'" class="thumb-overlay">
               <n-spin size="small" />
             </div>
@@ -87,6 +96,9 @@ const props = defineProps({
 const emit = defineEmits(['clear', 'update:isDragging', 'file-change', 'drop'])
 
 const isUploading = computed(() => props.uploadProgress?.status === 'uploading')
+
+const failedUrlSet = computed(() => new Set(props.uploadProgress?.failedUrls || []))
+
 const progressPercent = computed(() => {
   const t = props.uploadProgress?.total
   const c = props.uploadProgress?.current
@@ -127,7 +139,7 @@ const displayThumbnails = computed(() => {
   return (props.uploadedImages || []).map((img) => ({
     url: img.url,
     alt: img.file?.name || '图片',
-    status: 'success',
+    status: failedUrlSet.value.has(img.url) ? 'failed' : 'success',
   }))
 })
 
@@ -201,6 +213,15 @@ function onDrop(e) {
 
 .thumb-img--muted {
   opacity: 0.5;
+}
+
+.thumb-img--failed {
+  opacity: 0.92;
+  filter: saturate(0.85);
+}
+
+.thumb-badge--fail {
+  font-weight: 700;
 }
 
 .thumb-badge {

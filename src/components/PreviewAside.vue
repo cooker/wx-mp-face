@@ -54,6 +54,12 @@
           @dragover.prevent="onDragOver($event, i)"
           @drop.prevent="onDrop(i)"
         >
+          <n-tooltip v-if="isUploadFailed(img.url)" placement="top">
+            <template #trigger>
+              <n-tag class="preview-cell-fail" size="tiny" type="warning" round>!</n-tag>
+            </template>
+            上传失败，请在第三步点击「重试上传」
+          </n-tooltip>
           <button
             type="button"
             class="preview-cell-btn"
@@ -63,6 +69,7 @@
               :src="img.url"
               :alt="img.file?.name || '图片'"
               class="preview-cell-img"
+              :class="{ 'preview-cell-img--failed': isUploadFailed(img.url) }"
               :style="previewImgStyle"
               draggable="false"
             />
@@ -123,11 +130,17 @@ const props = defineProps({
   gridRows: { type: Number, default: 0 },
   reorderPreviewImages: { type: Function, default: null },
   removeUploadedImage: { type: Function, default: null },
+  failedUploadUrls: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['copy-rendered', 'update:gridColumns', 'update:gridRows'])
 
 const draggingIndex = ref(null)
+
+const failedUrlSet = computed(() => new Set(props.failedUploadUrls || []))
+function isUploadFailed(url) {
+  return !!(url && failedUrlSet.value.has(url))
+}
 
 function onReorderDragStart(e, index) {
   draggingIndex.value = index
@@ -227,6 +240,11 @@ const enlargedImage = ref(null)
   pointer-events: none;
 }
 
+.preview-cell-img--failed {
+  filter: saturate(0.88);
+  opacity: 0.95;
+}
+
 .preview-cell-hint {
   position: absolute;
   right: 4px;
@@ -243,6 +261,20 @@ const enlargedImage = ref(null)
 
 .preview-cell-wrap:hover .preview-cell-hint {
   opacity: 1;
+}
+
+.preview-cell-fail {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  z-index: 4;
+  min-width: 22px !important;
+  width: 22px;
+  height: 22px;
+  padding: 0 !important;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .preview-cell-delete {

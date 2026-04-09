@@ -39,7 +39,7 @@
                     @update:is-dragging="isDragging = $event"
                     @file-change="handleFileUpload"
                     @drop="handleFileUpload"
-                    @clear="clearImages"
+                    @clear="handleClearImages"
                   />
                   <n-empty
                     v-if="!previewImages.length"
@@ -78,12 +78,13 @@
                     :preview-cell-style="previewCellStyle"
                     :preview-grid-style="previewGridStyle"
                     :preview-img-style="previewImgStyle"
+                    :failed-upload-urls="uploadProgress.failedUrls"
                     :copy-success="copySuccess"
                     :is-copying="isCopying"
                     v-model:grid-columns="gridColumns"
                     v-model:grid-rows="gridRows"
                     :reorder-preview-images="reorderPreviewImages"
-                    :remove-uploaded-image="removeUploadedImage"
+                    :remove-uploaded-image="onRemoveUploadedImage"
                     @copy-rendered="handleCopyRendered"
                   />
                   <AuthorSection />
@@ -180,7 +181,31 @@ const uploadProgress = ref({
   fileName: '',
   status: 'idle',
   errorMessage: '',
+  failedUrls: [],
 })
+
+function handleClearImages() {
+  clearImages()
+  uploadProgress.value = {
+    total: 0,
+    current: 0,
+    fileName: '',
+    status: 'idle',
+    errorMessage: '',
+    failedUrls: [],
+  }
+}
+
+function onRemoveUploadedImage(url) {
+  removeUploadedImage(url)
+  const fu = uploadProgress.value.failedUrls
+  if (fu?.length) {
+    uploadProgress.value = {
+      ...uploadProgress.value,
+      failedUrls: fu.filter((u) => u !== url),
+    }
+  }
+}
 
 function openPreview() {
   showPreview.value = true
@@ -211,6 +236,7 @@ async function handleConfirmUpload() {
       fileName: '',
       status: 'error',
       errorMessage: '请先在第一步配置 owner、repo 和 Token',
+      failedUrls: [],
     }
     message.warning('请先在第一步配置 owner、repo 和 Token')
     return
@@ -252,6 +278,7 @@ async function handleConfirmUpload() {
     fileName: toUpload[0]?.file?.name || '',
     status: 'uploading',
     errorMessage: '',
+    failedUrls: [],
   }
 
   const urlMap = new Map()
@@ -288,23 +315,35 @@ async function handleConfirmUpload() {
   const failed = results.find((r) => r.status === 'rejected')
   if (failed) {
     const failedCount = results.filter((r) => r.status === 'rejected').length
+    const failedUrls = []
+    results.forEach((r, i) => {
+      if (r.status === 'rejected' && toUpload[i]?.url) failedUrls.push(toUpload[i].url)
+    })
     uploadProgress.value = {
       ...uploadProgress.value,
       status: 'error',
       errorMessage: (failed.reason?.message || '上传失败') + `，${failedCount} 张失败可重试`,
+      failedUrls,
     }
     message.error(uploadProgress.value.errorMessage)
     return
   }
 
-  uploadProgress.value = { ...uploadProgress.value, status: 'done' }
+  uploadProgress.value = { ...uploadProgress.value, status: 'done', failedUrls: [] }
   message.success('上传完成')
   nextTick(() => {
     previewAsideWrapRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   })
   setTimeout(() => {
     if (uploadProgress.value.status === 'done') {
-      uploadProgress.value = { total: 0, current: 0, fileName: '', status: 'idle', errorMessage: '' }
+      uploadProgress.value = {
+        total: 0,
+        current: 0,
+        fileName: '',
+        status: 'idle',
+        errorMessage: '',
+        failedUrls: [],
+      }
     }
   }, 2000)
 }

@@ -68,8 +68,15 @@
                   :src="img.url"
                   :alt="img.file?.name || '图片'"
                   class="thumb-img"
+                  :class="{ 'thumb-img--failed': isUploadFailed(img.url) }"
                   @click="openImage(g.key, i)"
                 />
+                <n-tooltip v-if="isUploadFailed(img.url)" placement="top">
+                  <template #trigger>
+                    <n-tag class="thumb-fail-badge" size="tiny" type="warning" round>!</n-tag>
+                  </template>
+                  上传失败，请重试上传或删除后重新添加
+                </n-tooltip>
               </div>
             </n-space>
           </n-card>
@@ -98,13 +105,21 @@ const props = defineProps({
   cropWidth: { type: Number, default: 224 },
   cropHeight: { type: Number, default: 224 },
   checkedImageUrls: { type: Array, default: () => [] },
-  uploadProgress: { type: Object, default: () => ({ total: 0, current: 0, fileName: '', status: 'idle', errorMessage: '' }) },
+  uploadProgress: {
+    type: Object,
+    default: () => ({ total: 0, current: 0, fileName: '', status: 'idle', errorMessage: '', failedUrls: [] }),
+  },
 })
 
 const emit = defineEmits(['open-preview', 'confirm-upload', 'update:cropWidth', 'update:cropHeight', 'update:checkedImageUrls'])
 
 const isUploading = computed(() => props.uploadProgress?.status === 'uploading')
 const localPreviewCount = computed(() => props.previewImages.filter((img) => img.file).length)
+
+const uploadFailedSet = computed(() => new Set(props.uploadProgress?.failedUrls || []))
+function isUploadFailed(url) {
+  return !!(url && uploadFailedSet.value.has(url))
+}
 
 const checkedSet = computed(() => new Set(props.checkedImageUrls || []))
 
@@ -206,5 +221,26 @@ function openImage(groupKey, itemIndex) {
   object-fit: cover;
   cursor: pointer;
   display: block;
+}
+
+.thumb-img--failed {
+  filter: saturate(0.88);
+  opacity: 0.95;
+}
+
+.thumb-fail-badge {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  z-index: 3;
+  display: flex;
+  min-width: 20px !important;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px !important;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
 }
 </style>
