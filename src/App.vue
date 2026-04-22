@@ -119,7 +119,7 @@ import { useGitHubRepoConfig } from './composables/useGitHubRepoConfig.js'
 import { useClipboard } from './composables/useClipboard.js'
 import { getRenderedStyleHtml } from './utils/copyRenderedStyle.js'
 import { centerCropToBlob } from './utils/imageUtils.js'
-import { runUploadTasksWithRetry } from './utils/uploadRetryQueue.js'
+import { runUploadConcurrentThenSerialRetry } from './utils/uploadRetryQueue.js'
 import UploadSection from './components/UploadSection.vue'
 import GitHubRepoConfig from './components/GitHubRepoConfig.vue'
 import GroupCropSection from './components/GroupCropSection.vue'
@@ -299,12 +299,20 @@ async function handleConfirmUpload() {
     },
   }))
 
-  const results = await runUploadTasksWithRetry(tasks, {
-    maxAttempts: 3,
-    onAttempt: ({ taskIndex, attempt }) => {
-      uploadProgress.value = {
-        ...uploadProgress.value,
-        fileName: `第 ${taskIndex + 1}/${toUpload.length} 张，第 ${attempt}/3 次上传`,
+  const maxSerialRetry = 3
+  const results = await runUploadConcurrentThenSerialRetry(tasks, {
+    maxSerialRetry,
+    onAttempt: ({ phase, taskIndex, attempt, total, completedConcurrent }) => {
+      if (phase === 'concurrent') {
+        uploadProgress.value = {
+          ...uploadProgress.value,
+          fileName: `并发上传 ${completedConcurrent ?? 0}/${total}`,
+        }
+      } else {
+        uploadProgress.value = {
+          ...uploadProgress.value,
+          fileName: `串行重试 第 ${taskIndex + 1}/${total} 张（${attempt}/${maxSerialRetry}）`,
+        }
       }
     },
   })
@@ -335,7 +343,9 @@ async function handleConfirmUpload() {
     uploadProgress.value = {
       ...uploadProgress.value,
       status: 'error',
-      errorMessage: (failed.reason?.message || '上传失败') + `，${failedCount} 张失败（已自动重试 3 次）`,
+      errorMessage:
+        (failed.reason?.message || '上传失败') +
+        `，${failedCount} 张失败（并发后已串行重试 ${maxSerialRetry} 次）`,
       failedUrls,
     }
     message.error(uploadProgress.value.errorMessage)
