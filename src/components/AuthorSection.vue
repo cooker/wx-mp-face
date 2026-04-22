@@ -13,7 +13,7 @@
 <script setup>
 import { resolveAssetUrl } from '../utils/assetUrl.js'
 
-const authorImageUrl = resolveAssetUrl('public/zsm.jpg')
+const authorImageUrl = resolveAssetUrl('zsm.jpg')
 </script>
 
 <style scoped>
