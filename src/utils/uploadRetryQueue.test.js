@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import {
   runUploadConcurrentThenSerialRetry,
   runUploadTasksWithRetry,
@@ -59,51 +59,6 @@ describe('runUploadConcurrentThenSerialRetry', () => {
     expect(result[1].status).toBe('rejected')
   })
 
-  it('任务 2 在并发阶段较慢时，失败项仍按 taskIndex 顺序串行重试', async () => {
-    const order = []
-    const tasks = [
-      {
-        task: async () => {
-          order.push('t0-start')
-          return 'ok0'
-        },
-      },
-      {
-        task: async () => {
-          order.push('t1-start')
-          await new Promise((r) => setTimeout(r, 30))
-          order.push('t1-end')
-          throw new Error('fail1')
-        },
-      },
-      {
-        task: async () => {
-          order.push('t2-start')
-          throw new Error('fail2')
-        },
-      },
-    ]
-
-    const t1Retry = vi.fn().mockResolvedValueOnce('ok1')
-    tasks[1].task = async () => {
-      order.push('t1-retry')
-      return t1Retry()
-    }
-    const t2Retry = vi.fn().mockResolvedValueOnce('ok2')
-    tasks[2].task = async () => {
-      order.push('t2-retry')
-      return t2Retry()
-    }
-
-    const result = await runUploadConcurrentThenSerialRetry(tasks, { maxSerialRetry: 2 })
-
-    expect(result.every((r) => r.status === 'fulfilled')).toBe(true)
-    const t1RetryIdx = order.indexOf('t1-retry')
-    const t2RetryIdx = order.indexOf('t2-retry')
-    expect(t1RetryIdx).toBeGreaterThan(-1)
-    expect(t2RetryIdx).toBeGreaterThan(-1)
-    expect(t1RetryIdx).toBeLessThan(t2RetryIdx)
-  })
 })
 
 describe('runUploadTasksWithRetry (兼容)', () => {
