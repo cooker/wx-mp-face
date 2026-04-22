@@ -1,7 +1,7 @@
 <template>
   <n-card title="作者" size="small" :bordered="true">
     <n-image
-      src="/zsm.jpg"
+      :src="authorImageUrl"
       alt="作者"
       object-fit="cover"
       preview-disabled
@@ -11,6 +11,9 @@
 </template>
 
 <script setup>
+import { resolveAssetUrl } from '../utils/assetUrl.js'
+
+const authorImageUrl = resolveAssetUrl('zsm.jpg')
 </script>
 
 <style scoped>

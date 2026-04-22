@@ -119,6 +119,7 @@ import { useGitHubRepoConfig } from './composables/useGitHubRepoConfig.js'
 import { useClipboard } from './composables/useClipboard.js'
 import { getRenderedStyleHtml } from './utils/copyRenderedStyle.js'
 import { centerCropToBlob } from './utils/imageUtils.js'
+import { runUploadTasksWithRetry } from './utils/uploadRetryQueue.js'
 import UploadSection from './components/UploadSection.vue'
 import GitHubRepoConfig from './components/GitHubRepoConfig.vue'
 import GroupCropSection from './components/GroupCropSection.vue'
@@ -287,21 +288,33 @@ async function handleConfirmUpload() {
   const cw = cropWidth.value || 224
   const ch = cropHeight.value || 224
 
-  const results = await Promise.allSettled(
-    toUpload.map(async (item) => {
+  const tasks = toUpload.map((item) => ({
+    item,
+    task: async () => {
       const blob = await centerCropToBlob(item.file, cw, ch)
       const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' })
       const path = buildPath(randomImageName(file))
       const result = await uploadFileToGitHub(file, path)
-      completedCount++
+      return { item, result }
+    },
+  }))
+
+  const results = await runUploadTasksWithRetry(tasks, {
+    maxAttempts: 3,
+    onAttempt: ({ taskIndex, attempt }) => {
       uploadProgress.value = {
         ...uploadProgress.value,
-        current: completedCount,
-        fileName: completedCount < toUpload.length ? '并发上传中…' : '',
+        fileName: `第 ${taskIndex + 1}/${toUpload.length} 张，第 ${attempt}/3 次上传`,
       }
-      return { item, result }
-    })
-  )
+    },
+  })
+
+  completedCount = results.filter((r) => r.status === 'fulfilled').length
+  uploadProgress.value = {
+    ...uploadProgress.value,
+    current: completedCount,
+    fileName: '',
+  }
 
   for (const r of results) {
     if (r.status === 'fulfilled') {
@@ -322,7 +335,7 @@ async function handleConfirmUpload() {
     uploadProgress.value = {
       ...uploadProgress.value,
       status: 'error',
-      errorMessage: (failed.reason?.message || '上传失败') + `，${failedCount} 张失败可重试`,
+      errorMessage: (failed.reason?.message || '上传失败') + `，${failedCount} 张失败（已自动重试 3 次）`,
       failedUrls,
     }
     message.error(uploadProgress.value.errorMessage)
