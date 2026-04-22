@@ -97,4 +97,4 @@ Private.
 
 ## 作者
 
-![作者](zsm.jpg)
+![作者](public/zsm.jpg)
