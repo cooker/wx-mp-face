@@ -70,16 +70,22 @@ export function useUploadedImages() {
       if (!file.type.startsWith('image/')) continue
       try {
         const { width, height } = await getImageDimensions(file)
-        list.push({ file, url: URL.createObjectURL(file), width, height })
+        list.push({ file, url: URL.createObjectURL(file), width, height, cropUploaded: false })
       } catch (_) {}
     }
     uploadedImages.value = list
   }
 
-  async function addRemoteImage(url) {
+  async function addRemoteImage(url, options = {}) {
     const u = url?.trim()
     if (!u) return
-    const item = { file: null, url: u, width: 224, height: 224 }
+    const item = {
+      file: null,
+      url: u,
+      width: 224,
+      height: 224,
+      cropUploaded: options.cropUploaded === true,
+    }
     uploadedImages.value = [...uploadedImages.value, item]
     getImageDimensionsFromUrl(u)
       .then((dim) => {
@@ -139,7 +145,7 @@ export function useUploadedImages() {
       const newUrl = item.url && urlMap.get(item.url)
       if (newUrl) {
         if (item.url?.startsWith('blob:')) URL.revokeObjectURL(item.url)
-        return { ...item, file: null, url: newUrl }
+        return { ...item, file: null, url: newUrl, cropUploaded: true }
       }
       return item
     })
